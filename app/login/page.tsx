@@ -63,6 +63,32 @@ export default function LoginPage() {
     }
   }
 
+  // Fonction pour les connexions sociales (Apple / Facebook en simulation ou extension future)
+  async function handleSocialLogin(providerName: string, mockEmail: string, mockName: string) {
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: mockEmail, name: mockName, provider: providerName }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Échec de la connexion ${providerName}.`);
+      }
+
+      localStorage.setItem('oravya_user', JSON.stringify(data.user));
+      router.push('/');
+    } catch (err: any) {
+      setError(err.message || 'Erreur de connexion sociale.');
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] font-sans selection:bg-[#4A151B] selection:text-[#F2EDE4] flex flex-col justify-between">
       {/* NAVBAR DE LA PAGE LOGIN */}
@@ -136,9 +162,12 @@ export default function LoginPage() {
 
             {/* BOUTONS SOCIAUX */}
             <div className="space-y-3">
+              {/* GOOGLE : Redirige vers l'authentification officielle OAuth 2.0 */}
               <button
                 type="button"
-                onClick={() => router.push('/')}
+                onClick={() => {
+                  window.location.href = '/api/auth/google';
+                }}
                 className="w-full flex items-center justify-center gap-3 bg-[#F2EDE4] border border-[#D8CEBE] py-3 px-4 rounded-xl text-sm font-semibold text-[#2C181A] hover:border-[#4A151B] transition shadow-sm"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -150,9 +179,10 @@ export default function LoginPage() {
                 Continue with Google
               </button>
 
+              {/* APPLE */}
               <button
                 type="button"
-                onClick={() => router.push('/')}
+                onClick={() => handleSocialLogin('Apple', 'user.apple@oravya.com', 'Apple User')}
                 className="w-full flex items-center justify-center gap-3 bg-[#F2EDE4] border border-[#D8CEBE] py-3 px-4 rounded-xl text-sm font-semibold text-[#2C181A] hover:border-[#4A151B] transition shadow-sm"
               >
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -161,9 +191,10 @@ export default function LoginPage() {
                 Continue with Apple
               </button>
 
+              {/* FACEBOOK */}
               <button
                 type="button"
-                onClick={() => router.push('/')}
+                onClick={() => handleSocialLogin('Facebook', 'user.facebook@oravya.com', 'Facebook User')}
                 className="w-full flex items-center justify-center gap-3 bg-[#F2EDE4] border border-[#D8CEBE] py-3 px-4 rounded-xl text-sm font-semibold text-[#2C181A] hover:border-[#4A151B] transition shadow-sm"
               >
                 <svg className="w-4 h-4 fill-[#1877F2]" viewBox="0 0 24 24">

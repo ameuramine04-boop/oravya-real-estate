@@ -29,7 +29,6 @@ import {
   saveStoredItems,
   getStoredMeetings,
   saveStoredMeetings,
-  getStoredUsers,
   getStoredBookings,
   saveStoredBookings,
   AMENITY_OPTIONS,
@@ -56,7 +55,6 @@ function formatAED(value: number) {
   return `AED ${value.toLocaleString('en-US')}`;
 }
 
-// Small shared empty-state block, reused across every table.
 function EmptyState({ icon: Icon, label }: { icon: typeof Inbox; label: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -110,6 +108,7 @@ export default function AdminDashboard() {
     }
     try {
       const user = JSON.parse(storedUser);
+      // Autoriser l'accès si c'est l'admin statique ou un admin de la base de données
       if (user.role !== 'ADMIN') {
         router.push('/');
         return;
@@ -119,7 +118,17 @@ export default function AdminDashboard() {
       setHolidays(getStoredItems('oravya_holidays'));
       setMeetings(getStoredMeetings());
       setBookings(getStoredBookings());
-      setUsersList(getStoredUsers());
+
+      // Charger les vrais utilisateurs depuis la base de données MySQL via l'API
+      fetch('/api/admin/users')
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setUsersList(data);
+          }
+        })
+        .catch((err) => console.error('Erreur chargement utilisateurs:', err));
+
     } catch {
       router.push('/login');
     } finally {
@@ -127,7 +136,6 @@ export default function AdminDashboard() {
     }
   }, [router]);
 
-  // Reset search/filter when switching tabs so stale filters don't hide data
   function switchTab(tab: Tab) {
     setActiveTab(tab);
     setQuery('');
@@ -260,8 +268,6 @@ export default function AdminDashboard() {
     saveStoredBookings(updated);
   };
 
-  // --- Filtering (search + status) per tab -----------------------------
-
   const filteredProperties = useMemo(() => {
     const list = activeTab === 'holidays' ? holidays : properties;
     return list.filter((item) => {
@@ -311,8 +317,6 @@ export default function AdminDashboard() {
     [usersList, query]
   );
 
-  // --- KPIs ---------------------------------------------------------------
-
   const kpis = useMemo(() => {
     const revenue = bookings.reduce((sum, b) => (b.status === 'Cancelled' ? sum : sum + b.totalPrice), 0);
     return [
@@ -330,7 +334,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] font-sans">
-      {/* HEADER */}
       <header className="border-b border-[#D8CEBE] bg-[#EBE4DA] px-8 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#4A151B] text-[#F2EDE4] flex items-center justify-center shadow-md">
@@ -376,7 +379,6 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* KPI ROW */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
           {kpis.map((kpi) => (
             <div key={kpi.label} className="bg-[#EBE4DA] border border-[#D8CEBE] rounded-2xl p-5 shadow-sm">
@@ -387,7 +389,6 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* TABS */}
         <div className="flex flex-wrap gap-3 mb-6 border-b border-[#D8CEBE] pb-4">
           {(
             [
@@ -412,7 +413,6 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* SEARCH + STATUS FILTER */}
         <div className="flex flex-col sm:flex-row gap-3 mb-8">
           <div className="flex items-center gap-3 flex-1 bg-[#EBE4DA] border border-[#D8CEBE] px-4 py-3 rounded-xl">
             <Search className="w-4 h-4 text-[#8C6D53] shrink-0" />
@@ -445,7 +445,6 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* PROPERTIES / HOLIDAYS TABLE */}
         {(activeTab === 'properties' || activeTab === 'holidays') && (
           <div className="bg-[#EBE4DA] border border-[#D8CEBE] rounded-3xl overflow-hidden shadow-sm">
             <div className="p-6 border-b border-[#D8CEBE]">
@@ -508,7 +507,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* MEETINGS TABLE */}
         {activeTab === 'meetings' && (
           <div className="bg-[#EBE4DA] border border-[#D8CEBE] rounded-3xl overflow-hidden shadow-sm">
             <div className="p-6 border-b border-[#D8CEBE]">
@@ -569,7 +567,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* BOOKINGS TABLE */}
         {activeTab === 'bookings' && (
           <div className="bg-[#EBE4DA] border border-[#D8CEBE] rounded-3xl overflow-hidden shadow-sm">
             <div className="p-6 border-b border-[#D8CEBE]">
@@ -634,14 +631,13 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* USERS TABLE */}
         {activeTab === 'users' && (
           <div className="bg-[#EBE4DA] border border-[#D8CEBE] rounded-3xl overflow-hidden shadow-sm">
             <div className="p-6 border-b border-[#D8CEBE]">
-              <h3 className={`${fraunces.className} text-xl text-[#2C181A]`}>Utilisateurs enregistrés ({filteredUsers.length})</h3>
+              <h3 className={`${fraunces.className} text-xl text-[#2C181A]`}>Utilisateurs enregistrés en base de données MySQL ({filteredUsers.length})</h3>
             </div>
             {filteredUsers.length === 0 ? (
-              <EmptyState icon={Users} label="Aucun utilisateur ne correspond à ta recherche." />
+              <EmptyState icon={Users} label="Aucun utilisateur inscrit pour le moment." />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -650,17 +646,21 @@ export default function AdminDashboard() {
                       <th className="px-6 py-4">Nom</th>
                       <th className="px-6 py-4">Email</th>
                       <th className="px-6 py-4">Rôle</th>
+                      <th className="px-6 py-4">Date d'inscription</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#D8CEBE]">
-                    {filteredUsers.map((u) => (
+                    {filteredUsers.map((u: any) => (
                       <tr key={u.id} className="hover:bg-[#F2EDE4]/40 transition">
-                        <td className="px-6 py-4 font-semibold text-[#2C181A]">{u.name}</td>
+                        <td className="px-6 py-4 font-semibold text-[#2C181A]">{u.name || 'N/A'}</td>
                         <td className="px-6 py-4 text-[#685248]">{u.email}</td>
                         <td className="px-6 py-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-bold ${u.role === 'ADMIN' ? 'bg-[#4A151B] text-[#F2EDE4]' : 'bg-[#F2EDE4] border border-[#D8CEBE] text-[#2C181A]'}`}>
                             {u.role}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 text-xs text-[#8C6D53]">
+                          {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'Récemment'}
                         </td>
                       </tr>
                     ))}
@@ -672,7 +672,6 @@ export default function AdminDashboard() {
         )}
       </main>
 
-      {/* MODAL — Add / Edit property or holiday home */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6">
           <div className="bg-[#EBE4DA] border border-[#D8CEBE] w-full max-w-xl p-8 rounded-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
