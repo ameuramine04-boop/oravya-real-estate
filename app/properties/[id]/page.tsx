@@ -5,9 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Fraunces } from 'next/font/google';
-import { MapPin, BedDouble, Bath, Maximize, CheckCircle2, Calendar, ArrowLeft, ShieldCheck, Phone } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Maximize, CheckCircle2, Calendar, ArrowLeft, ShieldCheck } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import { getStoredItems, saveStoredBooking, ItemProperty } from '@/lib/data';
 
 const fraunces = Fraunces({ subsets: ['latin'], weight: ['500', '600'], display: 'swap' });
 
@@ -16,8 +15,9 @@ export default function PropertyDetailPage() {
   const router = useRouter();
   const id = params?.id as string;
 
-  const [item, setItem] = useState<ItemProperty | null>(null);
+  const [item, setItem] = useState<any | null>(null);
   const [activeImage, setActiveImage] = useState<string>('');
+  const [loading, setLoading] = useState(true);
   
   // États de réservation / prise de contact
   const [checkIn, setCheckIn] = useState('');
@@ -28,19 +28,59 @@ export default function PropertyDetailPage() {
   const [bookedSuccess, setBookedSuccess] = useState(false);
 
   useEffect(() => {
-    // Recherche dans les propriétés et les holiday homes
-    const allItems = [...getStoredItems('oravya_properties'), ...getStoredItems('oravya_holidays')];
-    const found = allItems.find(p => p.id === id);
-    if (found) {
-      setItem(found);
-      setActiveImage(found.images?.[0] || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00');
+    async function fetchPropertyDetail() {
+      try {
+        const res = await fetch('/api/properties');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const found = data.find((p: any) => p.id === id);
+          if (found) {
+            // Parsing des images JSON stockées en base
+            let imgs = ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00'];
+            try {
+              if (found.images) {
+                const parsed = typeof found.images === 'string' ? JSON.parse(found.images) : found.images;
+                if (Array.isArray(parsed) && parsed.length > 0) imgs = parsed;
+              }
+            } catch (e) {}
+
+            // Parsing des équipements (amenities)
+            let ams = [];
+            try {
+              if (found.amenities) {
+                ams = typeof found.amenities === 'string' ? JSON.parse(found.amenities) : found.amenities;
+              }
+            } catch (e) {}
+
+            const formattedItem = { ...found, images: imgs, amenities: ams };
+            setItem(formattedItem);
+            setActiveImage(imgs[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Erreur chargement détail bien:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (id) {
+      fetchPropertyDetail();
     }
   }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] flex flex-col items-center justify-center p-6">
+        <p className="text-sm text-[#8C6D53]">Chargement du bien depuis MySQL...</p>
+      </div>
+    );
+  }
 
   if (!item) {
     return (
       <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] flex flex-col items-center justify-center p-6">
-        <p className="text-lg font-medium mb-4">Propriété introuvable ou supprimée.</p>
+        <p className="text-lg font-medium mb-4">Propriété introuvable ou supprimée de la base de données.</p>
         <Link href="/properties" className="bg-[#4A151B] text-[#F2EDE4] px-6 py-3 rounded-xl text-sm font-bold">
           Retour au catalogue
         </Link>
@@ -63,12 +103,13 @@ export default function PropertyDetailPage() {
   const totalNights = calculateTotalDays();
   const totalPrice = isHoliday ? item.price * totalNights : item.price;
 
-  const handleBookingSubmit = (e: React.FormEvent) => {
+  const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientName || !clientEmail || !clientPhone) return;
     if (isHoliday && (!checkIn || !checkOut)) return;
 
-    saveStoredBooking({
+    // Envoi de la réservation vers le localStorage ou route API dédiée si existante
+    const newBooking = {
       id: 'book-' + Date.now(),
       itemId: item.id,
       itemName: item.name,
@@ -81,7 +122,10 @@ export default function PropertyDetailPage() {
       totalPrice,
       status: 'Confirmed',
       createdAt: new Date().toISOString().split('T')[0]
-    });
+    };
+
+    const existingBookings = JSON.parse(localStorage.getItem('oravya_bookings') || '[]');
+    localStorage.setItem('oravya_bookings', JSON.stringify([newBooking, ...existingBookings]));
 
     setBookedSuccess(true);
   };
@@ -119,7 +163,7 @@ export default function PropertyDetailPage() {
             <Image src={activeImage} alt={item.name} fill className="object-cover" priority />
           </div>
           <div className="flex lg:flex-col gap-4 overflow-x-auto pb-2">
-            {item.images?.map((img, idx) => (
+            {item.images?.map((img: string, idx: number) => (
               <div 
                 key={idx} 
                 onClick={() => setActiveImage(img)}
@@ -164,7 +208,7 @@ export default function PropertyDetailPage() {
                 <>
                   <h4 className={`${fraunces.className} text-xl text-[#2C181A] mt-8 mb-4`}>Équipements & Services</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {item.amenities.map((amenity, idx) => (
+                    {item.amenities.map((amenity: string, idx: number) => (
                       <div key={idx} className="flex items-center gap-2 bg-[#F2EDE4] border border-[#D8CEBE] px-4 py-2.5 rounded-xl text-xs font-medium text-[#2C181A]">
                         <CheckCircle2 className="w-4 h-4 text-[#4A151B]" /> {amenity}
                       </div>

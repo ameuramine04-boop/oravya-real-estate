@@ -22,9 +22,11 @@ import {
 export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Charger les informations de l'utilisateur connecté depuis le localStorage
+  // Empêche tout décalage d'hydratation en attendant que le client soit monté
   useEffect(() => {
+    setIsMounted(true);
     const storedUser = localStorage.getItem('oravya_user');
     if (storedUser) {
       try {
@@ -42,6 +44,19 @@ export default function Navbar() {
     setDropdownOpen(false);
     window.location.href = '/';
   };
+
+  // Tant que le composant n'est pas monté coté client, on retourne un rendu neutre pour éviter l'erreur d'hydratation
+  if (!isMounted) {
+    return (
+      <header className="sticky top-0 z-50 border-b border-[#D8CEBE] bg-[#F2EDE4]/90 backdrop-blur-md px-6 py-4 shadow-sm">
+        <div className="max-w-7xl mx-auto w-full flex justify-between items-center">
+          <Link href="/" className="flex items-center gap-3">
+            <span className="text-xl font-bold tracking-widest text-[#4A151B]">ORAVYA</span>
+          </Link>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#D8CEBE] bg-[#F2EDE4]/90 backdrop-blur-md px-6 py-4 shadow-sm">
@@ -64,7 +79,7 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* NAVIGATION CENTRALE UNIFIÉE (AVEC LE BOUTON HOME AJOUTÉ) */}
+        {/* NAVIGATION CENTRALE UNIFIÉE */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-[#2C181A]">
           <Link href="/" className="flex items-center gap-1.5 hover:text-[#4A151B] transition py-1 group">
             <Home className="w-4 h-4 text-[#8C6D53] group-hover:text-[#4A151B] transition" />
@@ -119,7 +134,7 @@ export default function Navbar() {
 
               {/* CONTENU DU MENU DÉROULANT */}
               {dropdownOpen && (
-                <div className="absolute right-0 mt-3 w-64 bg-[#EBE4DA] border border-[#D8CEBE] rounded-3xl shadow-2xl py-3 text-sm text-[#2C181A] animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 mt-3 w-64 bg-[#EBE4DA] border border-[#D8CEBE] rounded-3xl shadow-2xl py-3 text-sm text-[#2C181A] animate-in fade-in slide-in-from-top-2 duration-200 z-50">
                   <div className="px-5 py-3 border-b border-[#D8CEBE] mb-1">
                     <p className="text-[11px] uppercase tracking-wider text-[#C5A880] font-bold">Signed in as</p>
                     <p className="font-semibold text-xs text-[#4A151B] truncate mt-0.5">{user.email}</p>

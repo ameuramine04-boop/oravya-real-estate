@@ -14,15 +14,10 @@ import {
   X,
   ArrowUpDown,
   Building2,
-  PhoneCall,
-  Menu,
-  Lock,
-  UserPlus,
   Heart,
 } from 'lucide-react';
 import Reveal from '@/components/Reveal';
 import Navbar from '@/components/Navbar';
-import { getStoredItems, ItemProperty } from '@/lib/data';
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -39,7 +34,8 @@ function formatAED(value: number) {
 }
 
 export default function PropertiesPage() {
-  const [properties, setProperties] = useState<ItemProperty[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [location, setLocation] = useState('All Locations');
@@ -49,9 +45,37 @@ export default function PropertiesPage() {
   const [sort, setSort] = useState<(typeof SORTS)[number]>('Featured');
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  // Charger les propriétés depuis MySQL et exclure les Holiday Homes
   useEffect(() => {
-    // Récupération dynamique depuis l'espace Admin / localStorage
-    setProperties(getStoredItems('oravya_properties'));
+    async function fetchProperties() {
+      try {
+        const res = await fetch('/api/properties');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          // EXCLUSION DES HOLIDAY HOMES : on ne garde que les propriétés classiques
+          const standardProperties = data.filter((p: any) => p.type !== 'Holiday Home');
+
+          const formatted = standardProperties.map((p) => {
+            let imgs = ['/logo.png'];
+            try {
+              if (p.images) {
+                const parsed = typeof p.images === 'string' ? JSON.parse(p.images) : p.images;
+                if (Array.isArray(parsed) && parsed.length > 0) imgs = parsed;
+              }
+            } catch (e) {}
+            return { ...p, images: imgs };
+          });
+          setProperties(formatted);
+        }
+      } catch (err) {
+        console.error('Erreur chargement propriétés MySQL:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProperties();
+
     const storedFavs = localStorage.getItem('oravya_favorites');
     if (storedFavs) {
       try { setFavorites(JSON.parse(storedFavs)); } catch (e) {}
@@ -112,7 +136,6 @@ export default function PropertiesPage() {
 
   return (
     <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] font-sans selection:bg-[#4A151B] selection:text-[#F2EDE4] overflow-x-hidden">
-      {/* NAVBAR UNIFIÉE */}
       <Navbar />
 
       {/* PAGE HEADER */}
@@ -126,7 +149,7 @@ export default function PropertiesPage() {
               The Full Portfolio, Curated for Serious Buyers
             </h1>
             <p className="text-[#685248] font-light max-w-sm">
-              Every listing below is verified and available today — filter by location, budget, and property type to find your match.
+              Discover our exclusive selection of luxury properties and apartments for sale in Dubai.
             </p>
           </div>
         </Reveal>
@@ -239,7 +262,11 @@ export default function PropertiesPage() {
 
       {/* RESULTS GRID */}
       <section className="px-6 py-14 max-w-7xl mx-auto">
-        {results.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-24">
+            <p className="text-sm text-[#8C6D53]">Loading properties from database...</p>
+          </div>
+        ) : results.length === 0 ? (
           <div className="text-center py-24 border border-dashed border-[#D8CEBE] rounded-2xl bg-[#EBE4DA]/40">
             <Building2 className="w-10 h-10 text-[#8C6D53] mx-auto mb-4" />
             <p className="text-[#2C181A] font-medium mb-1">No properties match these filters</p>
@@ -261,7 +288,7 @@ export default function PropertiesPage() {
                     <div>
                       <div className="h-56 bg-[#DFD6C9] relative overflow-hidden">
                         <Image 
-                          src={property.images?.[0] || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=800&auto=format&fit=crop'} 
+                          src={property.images?.[0] || '/logo.png'} 
                           alt={property.name} 
                           fill 
                           className="object-cover group-hover:scale-105 transition duration-500" 
@@ -272,7 +299,6 @@ export default function PropertiesPage() {
                           </span>
                         </div>
 
-                        {/* Bouton Favoris */}
                         <button
                           onClick={(e) => toggleFavorite(property.id, e)}
                           className={`absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center transition shadow-md z-20 ${
@@ -304,7 +330,7 @@ export default function PropertiesPage() {
                             </span>
                           )}
                           <span className="flex items-center gap-1.5">
-                            <Maximize className="w-4 h-4 text-[#8C6D53]" /> {property.size.toLocaleString('en-US')} sqft
+                            <Maximize className="w-4 h-4 text-[#8C6D53]" /> {property.size ? property.size.toLocaleString('en-US') : 0} sqft
                           </span>
                         </div>
                       </div>

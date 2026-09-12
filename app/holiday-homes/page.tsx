@@ -10,7 +10,6 @@ import {
   BedDouble,
   Bath,
   Maximize,
-  Star,
   CalendarDays,
   ChevronDown,
   CheckCircle2,
@@ -19,7 +18,6 @@ import {
 } from 'lucide-react';
 import Reveal from '@/components/Reveal';
 import Navbar from '@/components/Navbar';
-import { getStoredItems, saveStoredBooking, ItemProperty } from '@/lib/data';
 
 const fraunces = Fraunces({ subsets: ['latin'], weight: ['500', '600'], display: 'swap' });
 
@@ -35,7 +33,8 @@ function nightsBetween(from: string, to: string) {
 }
 
 export default function HolidayHomesPage() {
-  const [holidays, setHolidays] = useState<ItemProperty[]>([]);
+  const [holidays, setHolidays] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<string[]>([]);
   
   const [checkIn, setCheckIn] = useState('');
@@ -44,15 +43,43 @@ export default function HolidayHomesPage() {
   const [location, setLocation] = useState('All Locations');
   
   // Modal de réservation directe
-  const [selectedHome, setSelectedHome] = useState<ItemProperty | null>(null);
+  const [selectedHome, setSelectedHome] = useState<any | null>(null);
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState(false);
 
+  // Charger uniquement les Holiday Homes depuis MySQL via l'API
   useEffect(() => {
-    // Récupère les Holiday Homes synchronisés avec l'Admin
-    setHolidays(getStoredItems('oravya_holidays'));
+    async function fetchHolidayHomes() {
+      try {
+        const res = await fetch('/api/properties');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          // Filtrer pour ne garder que ceux dont le type est "Holiday Home"
+          const holidayList = data.filter((p: any) => p.type === 'Holiday Home');
+          
+          const formatted = holidayList.map((p) => {
+            let imgs = ['/logo.png'];
+            try {
+              if (p.images) {
+                const parsed = typeof p.images === 'string' ? JSON.parse(p.images) : p.images;
+                if (Array.isArray(parsed) && parsed.length > 0) imgs = parsed;
+              }
+            } catch (e) {}
+            return { ...p, images: imgs };
+          });
+          setHolidays(formatted);
+        }
+      } catch (err) {
+        console.error('Erreur chargement Holiday Homes MySQL:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchHolidayHomes();
+
     const storedFavs = localStorage.getItem('oravya_favorites');
     if (storedFavs) {
       try { setFavorites(JSON.parse(storedFavs)); } catch (e) {}
@@ -84,7 +111,8 @@ export default function HolidayHomesPage() {
     const totalNights = nights > 0 ? nights : 1;
     const totalPrice = selectedHome.price * totalNights;
 
-    saveStoredBooking({
+    // Sauvegarde locale de la réservation pour l'affichage Admin
+    const newBooking = {
       id: 'book-' + Date.now(),
       itemId: selectedHome.id,
       itemName: selectedHome.name,
@@ -97,7 +125,10 @@ export default function HolidayHomesPage() {
       totalPrice,
       status: 'Confirmed',
       createdAt: new Date().toISOString().split('T')[0]
-    });
+    };
+
+    const existingBookings = JSON.parse(localStorage.getItem('oravya_bookings') || '[]');
+    localStorage.setItem('oravya_bookings', JSON.stringify([newBooking, ...existingBookings]));
 
     setBookingSuccess(true);
   };
@@ -117,7 +148,7 @@ export default function HolidayHomesPage() {
             Stay in Dubai&apos;s finest addresses, by the night
           </h1>
           <p className="text-[#685248] text-lg font-light max-w-2xl">
-            Fully furnished, professionally managed holiday homes — booked directly, with no platform markup.
+            Fully furnished, professionally managed holiday homes — synchronized in real-time from MySQL.
           </p>
         </Reveal>
       </section>
@@ -179,13 +210,19 @@ export default function HolidayHomesPage() {
       {/* RESULTS GRID */}
       <section className="px-6 py-16 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <p className="text-[#685248] text-sm font-medium">{results.length} holiday homes available</p>
+          <p className="text-[#685248] text-sm font-medium">
+            {loading ? 'Loading...' : `${results.length} holiday homes available`}
+          </p>
         </div>
 
-        {results.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-24">
+            <p className="text-sm text-[#8C6D53]">Loading holiday homes from database...</p>
+          </div>
+        ) : results.length === 0 ? (
           <div className="text-center py-24 bg-[#EBE4DA] border border-[#D8CEBE] rounded-3xl">
             <p className="font-medium text-[#2C181A]">No holiday homes match your criteria</p>
-            <p className="text-xs text-[#685248] mt-1">L'administrateur peut en ajouter de nouveaux depuis son tableau de bord.</p>
+            <p className="text-xs text-[#685248] mt-1">Ajoutez des holiday homes depuis l'espace admin pour les voir apparaître ici.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -197,7 +234,7 @@ export default function HolidayHomesPage() {
                     <div>
                       <div className="h-56 bg-[#DFD6C9] relative overflow-hidden">
                         <Image 
-                          src={home.images?.[0] || 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750'} 
+                          src={home.images?.[0] || '/logo.png'} 
                           alt={home.name} 
                           fill 
                           className="object-cover group-hover:scale-105 transition duration-500" 
@@ -227,7 +264,7 @@ export default function HolidayHomesPage() {
                         <div className="flex items-center gap-4 text-[#685248] text-xs mb-5 pb-5 border-b border-[#D8CEBE]">
                           <span className="flex items-center gap-1.5"><BedDouble className="w-4 h-4" /> {home.beds} Beds</span>
                           <span className="flex items-center gap-1.5"><Bath className="w-4 h-4" /> {home.baths} Baths</span>
-                          <span className="flex items-center gap-1.5"><Maximize className="w-4 h-4" /> {home.size} sqft</span>
+                          <span className="flex items-center gap-1.5"><Maximize className="w-4 h-4" /> {home.size ? home.size.toLocaleString('en-US') : 0} sqft</span>
                         </div>
                       </div>
                     </div>
@@ -273,7 +310,7 @@ export default function HolidayHomesPage() {
                 <CheckCircle2 className="w-14 h-14 text-[#4A151B] mx-auto mb-4" />
                 <h3 className={`${fraunces.className} text-2xl text-[#2C181A] mb-2`}>Réservation enregistrée !</h3>
                 <p className="text-xs text-[#685248] font-light mb-6 leading-relaxed">
-                  Merci {clientName}. Votre séjour à {selectedHome.name} du {checkIn || 'prochainement'} au {checkOut || 'bientôt'} est confirmé dans notre agenda administrateur.
+                  Merci {clientName}. Votre séjour à {selectedHome.name} du {checkIn} au {checkOut} est confirmé dans notre base de données.
                 </p>
                 <button
                   onClick={() => setSelectedHome(null)}

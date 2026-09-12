@@ -25,8 +25,6 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import {
-  getStoredItems,
-  saveStoredItems,
   getStoredMeetings,
   saveStoredMeetings,
   getStoredBookings,
@@ -78,7 +76,7 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState<BookingRequest[]>([]);
   const [usersList, setUsersList] = useState<UserAccount[]>([]);
 
-  // Search & status filter, shared across tabs
+  // Search & status filter
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 
@@ -100,6 +98,48 @@ export default function AdminDashboard() {
     amenities: [] as string[],
   });
 
+  // Fonction de chargement des données depuis les API MySQL
+  const fetchAllData = async () => {
+    try {
+      // 1. Charger les propriétés depuis MySQL
+      const propRes = await fetch('/api/properties');
+      const propData = await propRes.json();
+      if (Array.isArray(propData)) {
+        const formatted = propData.map((p: any) => {
+          let imgs = ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00'];
+          try {
+            if (p.images) {
+              const parsed = typeof p.images === 'string' ? JSON.parse(p.images) : p.images;
+              if (Array.isArray(parsed) && parsed.length > 0) imgs = parsed;
+            }
+          } catch (e) {}
+
+          let ams = [];
+          try {
+            if (p.amenities) {
+              ams = typeof p.amenities === 'string' ? JSON.parse(p.amenities) : p.amenities;
+            }
+          } catch (e) {}
+
+          return { ...p, images: imgs, amenities: ams };
+        });
+
+        // Séparation entre propriétés classiques et Holiday Homes
+        setProperties(formatted.filter((p: any) => p.type !== 'Holiday Home'));
+        setHolidays(formatted.filter((p: any) => p.type === 'Holiday Home'));
+      }
+
+      // 2. Charger les utilisateurs depuis MySQL
+      const userRes = await fetch('/api/admin/users');
+      const userData = await userRes.json();
+      if (Array.isArray(userData)) {
+        setUsersList(userData);
+      }
+    } catch (err) {
+      console.error('Erreur chargement données admin MySQL:', err);
+    }
+  };
+
   useEffect(() => {
     const storedUser = localStorage.getItem('oravya_user');
     if (!storedUser) {
@@ -108,27 +148,17 @@ export default function AdminDashboard() {
     }
     try {
       const user = JSON.parse(storedUser);
-      // Autoriser l'accès si c'est l'admin statique ou un admin de la base de données
       if (user.role !== 'ADMIN') {
         router.push('/');
         return;
       }
       setIsAdmin(true);
-      setProperties(getStoredItems('oravya_properties'));
-      setHolidays(getStoredItems('oravya_holidays'));
+
+      // Charger toutes les données
+      fetchAllData();
+
       setMeetings(getStoredMeetings());
       setBookings(getStoredBookings());
-
-      // Charger les vrais utilisateurs depuis la base de données MySQL via l'API
-      fetch('/api/admin/users')
-        .then((res) => res.json())
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setUsersList(data);
-          }
-        })
-        .catch((err) => console.error('Erreur chargement utilisateurs:', err));
-
     } catch {
       router.push('/login');
     } finally {
@@ -195,50 +225,54 @@ export default function AdminDashboard() {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  // Enregistrement (Ajout ou Modification) directement dans MySQL via l'API
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.price) return;
 
-    const currentList = activeTab === 'holidays' ? holidays : properties;
-    let updatedList: ItemProperty[];
-    const finalImages =
-      form.images.length > 0
-        ? form.images
-        : ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=800&auto=format&fit=crop'];
+    const propertyData = {
+      ...form,
+      type: activeTab === 'holidays' ? 'Holiday Home' : form.type,
+      images: form.images.length > 0 ? form.images : ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00'],
+    };
 
-    if (editingId) {
-      updatedList = currentList.map((item) =>
-        item.id === editingId ? { ...item, ...form, images: finalImages } : item
-      );
-    } else {
-      const newItem: ItemProperty = {
-        id: 'item-' + Date.now(),
-        ...form,
-        images: finalImages,
-      };
-      updatedList = [newItem, ...currentList];
+    try {
+      const url = editingId ? `/api/properties/${editingId}` : '/api/properties';
+      const method = editingId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(propertyData),
+      });
+
+      if (!res.ok) throw new Error('Erreur lors de la sauvegarde');
+
+      // Rafraîchir les données depuis MySQL
+      await fetchAllData();
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la communication avec la base de données MySQL.');
     }
-
-    if (activeTab === 'holidays') {
-      setHolidays(updatedList);
-      saveStoredItems('oravya_holidays', updatedList);
-    } else {
-      setProperties(updatedList);
-      saveStoredItems('oravya_properties', updatedList);
-    }
-
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (activeTab === 'holidays') {
-      const updated = holidays.filter((i) => i.id !== id);
-      setHolidays(updated);
-      saveStoredItems('oravya_holidays', updated);
-    } else {
-      const updated = properties.filter((i) => i.id !== id);
-      setProperties(updated);
-      saveStoredItems('oravya_properties', updated);
+  // Suppression directement dans MySQL via l'API
+  const handleDelete = async (id: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce bien de la base de données ?')) return;
+
+    try {
+      const res = await fetch(`/api/properties/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Erreur lors de la suppression');
+
+      // Rafraîchir les données depuis MySQL
+      await fetchAllData();
+    } catch (err) {
+      console.error(err);
+      alert('Impossible de supprimer le bien.');
     }
   };
 
@@ -341,7 +375,7 @@ export default function AdminDashboard() {
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-wider text-[#4A151B]">ORAVYA ADMIN</h1>
-            <p className="text-[10px] uppercase text-[#8C6D53] tracking-widest font-light">Secure Control Center</p>
+            <p className="text-[10px] uppercase text-[#8C6D53] tracking-widest font-light">MySQL Database Connected</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
