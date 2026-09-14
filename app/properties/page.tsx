@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import { Fraunces } from 'next/font/google';
 import {
   Search,
@@ -34,6 +35,15 @@ function formatAED(value: number) {
 }
 
 export default function PropertiesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F2EDE4] flex items-center justify-center text-[#8C6D53] text-sm">Loading properties...</div>}>
+      <PropertiesContent />
+    </Suspense>
+  );
+}
+
+function PropertiesContent() {
+  const searchParams = useSearchParams();
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -44,6 +54,17 @@ export default function PropertiesPage() {
   const [maxPrice, setMaxPrice] = useState(25000000);
   const [sort, setSort] = useState<(typeof SORTS)[number]>('Featured');
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Apply URL filters from homepage search
+  useEffect(() => {
+    const loc = searchParams.get('location');
+    const typ = searchParams.get('type');
+    if (loc) {
+      setQuery(loc);
+      setLocation('All Locations');
+    }
+    if (typ) setType(typ);
+  }, [searchParams]);
 
   // Charger les propriétés depuis MySQL et exclure les Holiday Homes
   useEffect(() => {
@@ -360,6 +381,7 @@ export default function PropertiesPage() {
         <p>© 2026 Oravya Real Estate. All rights reserved. Dubai, UAE.</p>
         <div className="flex gap-6 mt-4 md:mt-0">
           <Link href="/properties" className="hover:text-[#4A151B] transition">Properties</Link>
+          <Link href="/services" className="hover:text-[#4A151B] transition">Services</Link>
           <Link href="/holiday-homes" className="hover:text-[#4A151B] transition">Holiday Homes</Link>
           <Link href="/contact" className="hover:text-[#4A151B] transition">Contact</Link>
         </div>

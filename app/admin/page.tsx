@@ -23,10 +23,9 @@ import {
   Inbox,
   CheckCircle2,
   RotateCcw,
+  Briefcase,
 } from 'lucide-react';
 import {
-  getStoredMeetings,
-  saveStoredMeetings,
   getStoredBookings,
   saveStoredBookings,
   AMENITY_OPTIONS,
@@ -35,19 +34,23 @@ import {
   UserAccount,
   BookingRequest,
   PropertyStatus,
+  ServiceItem,
 } from '@/lib/data';
 
 const fraunces = Fraunces({ subsets: ['latin'], weight: ['500', '600'], display: 'swap' });
 
-type Tab = 'properties' | 'holidays' | 'meetings' | 'bookings' | 'users';
+type Tab = 'properties' | 'holidays' | 'services' | 'meetings' | 'bookings' | 'users';
 
 const STATUS_FILTERS: Record<Tab, string[]> = {
   properties: ['All', 'Off-Plan', 'Ready'],
   holidays: ['All', 'Available', 'Booked'],
+  services: ['All', 'Active', 'Inactive'],
   bookings: ['All', 'Pending', 'Confirmed', 'Cancelled', 'Completed'],
   meetings: ['All', 'Pending', 'Handled'],
   users: [],
 };
+
+const SERVICE_ICON_OPTIONS = ['Building2', 'RefreshCcw', 'Crown', 'KeyRound', 'LineChart', 'Sparkles'];
 
 function formatAED(value: number) {
   return `AED ${value.toLocaleString('en-US')}`;
@@ -72,6 +75,7 @@ export default function AdminDashboard() {
 
   const [properties, setProperties] = useState<ItemProperty[]>([]);
   const [holidays, setHolidays] = useState<ItemProperty[]>([]);
+  const [services, setServices] = useState<ServiceItem[]>([]);
   const [meetings, setMeetings] = useState<MeetingRequest[]>([]);
   const [bookings, setBookings] = useState<BookingRequest[]>([]);
   const [usersList, setUsersList] = useState<UserAccount[]>([]);
@@ -82,6 +86,7 @@ export default function AdminDashboard() {
 
   // Modal state (add / edit)
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
@@ -96,6 +101,15 @@ export default function AdminDashboard() {
     images: [] as string[],
     description: '',
     amenities: [] as string[],
+  });
+
+  const [serviceForm, setServiceForm] = useState({
+    title: '',
+    tagline: '',
+    description: '',
+    icon: 'Building2',
+    sortOrder: 0,
+    active: true,
   });
 
   // Fonction de chargement des données depuis les API MySQL
@@ -129,7 +143,21 @@ export default function AdminDashboard() {
         setHolidays(formatted.filter((p: any) => p.type === 'Holiday Home'));
       }
 
-      // 2. Charger les utilisateurs depuis MySQL
+      // 2. Charger les services depuis MySQL
+      const serviceRes = await fetch('/api/services');
+      const serviceData = await serviceRes.json();
+      if (Array.isArray(serviceData)) {
+        setServices(serviceData);
+      }
+
+      // 3. Charger les réunions depuis MySQL
+      const meetingRes = await fetch('/api/meetings');
+      const meetingData = await meetingRes.json();
+      if (Array.isArray(meetingData)) {
+        setMeetings(meetingData);
+      }
+
+      // 4. Charger les utilisateurs depuis MySQL
       const userRes = await fetch('/api/admin/users');
       const userData = await userRes.json();
       if (Array.isArray(userData)) {
@@ -156,8 +184,6 @@ export default function AdminDashboard() {
 
       // Charger toutes les données
       fetchAllData();
-
-      setMeetings(getStoredMeetings());
       setBookings(getStoredBookings());
     } catch {
       router.push('/login');
@@ -276,18 +302,93 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteMeeting = (id: string) => {
-    const updated = meetings.filter((m) => m.id !== id);
-    setMeetings(updated);
-    saveStoredMeetings(updated);
+  const handleDeleteMeeting = async (id: string) => {
+    if (!confirm('Supprimer cette demande de réunion ?')) return;
+    try {
+      const res = await fetch(`/api/meetings/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Erreur suppression');
+      await fetchAllData();
+    } catch (err) {
+      console.error(err);
+      alert('Impossible de supprimer la réunion.');
+    }
   };
 
-  const handleToggleMeetingStatus = (id: string) => {
-    const updated = meetings.map((m) =>
-      m.id === id ? { ...m, status: (m.status === 'Handled' ? 'Pending' : 'Handled') as MeetingRequest['status'] } : m
-    );
-    setMeetings(updated);
-    saveStoredMeetings(updated);
+  const handleToggleMeetingStatus = async (id: string) => {
+    const current = meetings.find((m) => m.id === id);
+    if (!current) return;
+    const nextStatus = current.status === 'Handled' ? 'Pending' : 'Handled';
+    try {
+      const res = await fetch(`/api/meetings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (!res.ok) throw new Error('Erreur statut');
+      await fetchAllData();
+    } catch (err) {
+      console.error(err);
+      alert('Impossible de mettre à jour le statut.');
+    }
+  };
+
+  const handleOpenAddServiceModal = () => {
+    setEditingId(null);
+    setServiceForm({
+      title: '',
+      tagline: '',
+      description: '',
+      icon: 'Building2',
+      sortOrder: services.length + 1,
+      active: true,
+    });
+    setIsServiceModalOpen(true);
+  };
+
+  const handleOpenEditServiceModal = (item: ServiceItem) => {
+    setEditingId(item.id);
+    setServiceForm({
+      title: item.title,
+      tagline: item.tagline,
+      description: item.description || '',
+      icon: item.icon || 'Building2',
+      sortOrder: item.sortOrder || 0,
+      active: item.active !== false,
+    });
+    setIsServiceModalOpen(true);
+  };
+
+  const handleSaveService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!serviceForm.title || !serviceForm.tagline) return;
+
+    try {
+      const url = editingId ? `/api/services/${editingId}` : '/api/services';
+      const method = editingId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(serviceForm),
+      });
+      if (!res.ok) throw new Error('Erreur sauvegarde service');
+      await fetchAllData();
+      setIsServiceModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la communication avec MySQL (services).');
+    }
+  };
+
+  const handleDeleteService = async (id: string) => {
+    if (!confirm('Supprimer ce service de la base de données ?')) return;
+    try {
+      const res = await fetch(`/api/services/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Erreur suppression');
+      await fetchAllData();
+    } catch (err) {
+      console.error(err);
+      alert('Impossible de supprimer le service.');
+    }
   };
 
   const handleDeleteBooking = (id: string) => {
@@ -340,6 +441,22 @@ export default function AdminDashboard() {
     [meetings, query, statusFilter]
   );
 
+  const filteredServices = useMemo(
+    () =>
+      services.filter((s) => {
+        const matchesQuery =
+          query.trim() === '' ||
+          s.title.toLowerCase().includes(query.toLowerCase()) ||
+          s.tagline.toLowerCase().includes(query.toLowerCase());
+        const matchesStatus =
+          statusFilter === 'All' ||
+          (statusFilter === 'Active' && s.active) ||
+          (statusFilter === 'Inactive' && !s.active);
+        return matchesQuery && matchesStatus;
+      }),
+    [services, query, statusFilter]
+  );
+
   const filteredUsers = useMemo(
     () =>
       usersList.filter(
@@ -356,11 +473,13 @@ export default function AdminDashboard() {
     return [
       { icon: Building2, label: 'Active Properties', value: properties.length.toString() },
       { icon: Home, label: 'Holiday Homes', value: holidays.length.toString() },
+      { icon: Briefcase, label: 'Services', value: services.length.toString() },
+      { icon: Calendar, label: 'Pending Meetings', value: meetings.filter((m) => m.status === 'Pending').length.toString() },
+      { icon: CalendarCheck, label: 'Bookings', value: bookings.length.toString() },
       { icon: Wallet, label: 'Booking Revenue', value: formatAED(revenue) },
-      { icon: Users, label: 'Registered Users', value: usersList.length.toString() },
-      { icon: Calendar, label: 'Meetings Scheduled', value: meetings.length.toString() },
+      { icon: Users, label: 'Users', value: usersList.length.toString() },
     ];
-  }, [properties, holidays, bookings, usersList, meetings]);
+  }, [properties, holidays, services, meetings, bookings, usersList]);
 
   if (loading || !isAdmin) return null;
 
@@ -411,9 +530,18 @@ export default function AdminDashboard() {
               <span>Ajouter {activeTab === 'holidays' ? 'un Holiday Home' : 'une Propriété'}</span>
             </button>
           )}
+          {activeTab === 'services' && (
+            <button
+              onClick={handleOpenAddServiceModal}
+              className="bg-[#4A151B] text-[#F2EDE4] font-bold px-6 py-3.5 rounded-xl hover:bg-[#3B1115] transition shadow-lg flex items-center gap-2 text-sm shrink-0"
+            >
+              <PlusCircle className="w-4 h-4 text-[#C5A880]" />
+              <span>Ajouter un Service</span>
+            </button>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-10">
           {kpis.map((kpi) => (
             <div key={kpi.label} className="bg-[#EBE4DA] border border-[#D8CEBE] rounded-2xl p-5 shadow-sm">
               <kpi.icon className="w-5 h-5 text-[#4A151B] mb-3" />
@@ -428,6 +556,7 @@ export default function AdminDashboard() {
             [
               ['properties', `Propriétés (${properties.length})`],
               ['holidays', `Holiday Homes (${holidays.length})`],
+              ['services', `Services (${services.length})`],
               ['meetings', `Réunions (${meetings.length})`],
               ['bookings', `Réservations (${bookings.length})`],
               ['users', `Utilisateurs (${usersList.length})`],
@@ -461,6 +590,8 @@ export default function AdminDashboard() {
                   ? 'Rechercher par client ou service...'
                   : activeTab === 'bookings'
                   ? 'Rechercher par client ou bien...'
+                  : activeTab === 'services'
+                  ? 'Rechercher par titre ou tagline...'
                   : 'Rechercher par nom ou localisation...'
               }
               className="bg-transparent w-full outline-none text-sm text-[#2C181A] placeholder:text-[#8C6D53]/70"
@@ -529,6 +660,57 @@ export default function AdminDashboard() {
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button onClick={() => handleDelete(item.id)} className="p-2 text-red-700 hover:bg-red-500/10 rounded-lg transition" title="Supprimer">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'services' && (
+          <div className="bg-[#EBE4DA] border border-[#D8CEBE] rounded-3xl overflow-hidden shadow-sm">
+            <div className="p-6 border-b border-[#D8CEBE]">
+              <h3 className={`${fraunces.className} text-xl text-[#2C181A]`}>
+                Gestion des services — Our Services ({filteredServices.length})
+              </h3>
+            </div>
+            {filteredServices.length === 0 ? (
+              <EmptyState icon={Briefcase} label="Aucun service ne correspond à ta recherche." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[#DFD6C9]/60 text-[#8C6D53] uppercase text-[11px] tracking-wider border-b border-[#D8CEBE]">
+                    <tr>
+                      <th className="px-6 py-4">Ordre</th>
+                      <th className="px-6 py-4">Titre</th>
+                      <th className="px-6 py-4">Tagline</th>
+                      <th className="px-6 py-4">Icône</th>
+                      <th className="px-6 py-4">Statut</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#D8CEBE]">
+                    {filteredServices.map((item) => (
+                      <tr key={item.id} className="hover:bg-[#F2EDE4]/40 transition">
+                        <td className="px-6 py-4 font-semibold text-[#4A151B]">{item.sortOrder}</td>
+                        <td className="px-6 py-4 font-semibold text-[#2C181A]">{item.title}</td>
+                        <td className="px-6 py-4 text-[#685248] max-w-xs truncate">{item.tagline}</td>
+                        <td className="px-6 py-4 text-xs text-[#8C6D53]">{item.icon}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${item.active ? 'bg-[#4A151B] text-[#F2EDE4]' : 'bg-amber-100 text-amber-800 border border-amber-300'}`}>
+                            {item.active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                          <button onClick={() => handleOpenEditServiceModal(item)} className="p-2 text-[#8C6D53] hover:bg-[#D8CEBE]/50 rounded-lg transition" title="Modifier">
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDeleteService(item.id)} className="p-2 text-red-700 hover:bg-red-500/10 rounded-lg transition" title="Supprimer">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </td>
@@ -850,6 +1032,99 @@ export default function AdminDashboard() {
 
               <div className="pt-4 flex justify-end gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="bg-[#F2EDE4] border border-[#D8CEBE] text-[#2C181A] px-5 py-2.5 rounded-xl text-xs font-semibold">
+                  Annuler
+                </button>
+                <button type="submit" className="bg-[#4A151B] text-[#F2EDE4] px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-[#3B1115] transition shadow-md">
+                  {editingId ? 'Mettre à jour' : 'Publier'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isServiceModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="bg-[#EBE4DA] border border-[#D8CEBE] w-full max-w-xl p-8 rounded-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setIsServiceModalOpen(false)} className="absolute top-6 right-6 p-2 text-[#685248] hover:text-[#4A151B]">
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className={`${fraunces.className} text-2xl text-[#2C181A] mb-6`}>
+              {editingId ? 'Modifier le service' : 'Ajouter un nouveau service'}
+            </h3>
+
+            <form onSubmit={handleSaveService} className="space-y-5">
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[#8C6D53] font-semibold mb-1.5">Titre</label>
+                <input
+                  type="text"
+                  value={serviceForm.title}
+                  onChange={(e) => setServiceForm({ ...serviceForm, title: e.target.value })}
+                  required
+                  placeholder="Off Plan Properties"
+                  className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm text-[#2C181A] outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[#8C6D53] font-semibold mb-1.5">Tagline</label>
+                <input
+                  type="text"
+                  value={serviceForm.tagline}
+                  onChange={(e) => setServiceForm({ ...serviceForm, tagline: e.target.value })}
+                  required
+                  placeholder="Premium projects — Smart investments"
+                  className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm text-[#2C181A] outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[#8C6D53] font-semibold mb-1.5">Description</label>
+                <textarea
+                  value={serviceForm.description}
+                  onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
+                  rows={4}
+                  placeholder="Description détaillée du service..."
+                  className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm text-[#2C181A] outline-none resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[#8C6D53] font-semibold mb-1.5">Icône</label>
+                  <select
+                    value={serviceForm.icon}
+                    onChange={(e) => setServiceForm({ ...serviceForm, icon: e.target.value })}
+                    className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm text-[#2C181A] outline-none"
+                  >
+                    {SERVICE_ICON_OPTIONS.map((icon) => (
+                      <option key={icon} value={icon}>{icon}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[#8C6D53] font-semibold mb-1.5">Ordre d&apos;affichage</label>
+                  <input
+                    type="number"
+                    value={serviceForm.sortOrder}
+                    onChange={(e) => setServiceForm({ ...serviceForm, sortOrder: Number(e.target.value) })}
+                    className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm text-[#2C181A] outline-none"
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-3 text-sm text-[#2C181A] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={serviceForm.active}
+                  onChange={(e) => setServiceForm({ ...serviceForm, active: e.target.checked })}
+                  className="w-4 h-4 accent-[#4A151B]"
+                />
+                Service actif (visible sur le site)
+              </label>
+
+              <div className="pt-4 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsServiceModalOpen(false)} className="bg-[#F2EDE4] border border-[#D8CEBE] text-[#2C181A] px-5 py-2.5 rounded-xl text-xs font-semibold">
                   Annuler
                 </button>
                 <button type="submit" className="bg-[#4A151B] text-[#F2EDE4] px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-[#3B1115] transition shadow-md">

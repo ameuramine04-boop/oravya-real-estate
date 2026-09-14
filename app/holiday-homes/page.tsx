@@ -148,7 +148,7 @@ export default function HolidayHomesPage() {
             Stay in Dubai&apos;s finest addresses, by the night
           </h1>
           <p className="text-[#685248] text-lg font-light max-w-2xl">
-            Fully furnished, professionally managed holiday homes — synchronized in real-time from MySQL.
+            Choose from a wide range of modern and luxurious holiday homes in Dubai.
           </p>
         </Reveal>
       </section>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Fraunces } from 'next/font/google';
 import {
@@ -12,9 +12,25 @@ import {
   ShieldCheck,
   ArrowRight,
   CheckCircle2,
+  RefreshCcw,
+  Crown,
+  KeyRound,
+  LineChart,
+  Sparkles,
+  Tag,
+  Star,
+  Send,
+  type LucideIcon,
 } from 'lucide-react';
 import Reveal from '@/components/Reveal';
 import Navbar from '@/components/Navbar';
+import SectionBackdrop from '@/components/SectionBackdrop';
+import {
+  ServiceItem,
+  ReviewItem,
+  HomeCtaItem,
+  PropertyCategoryItem,
+} from '@/lib/data';
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -23,16 +39,145 @@ const fraunces = Fraunces({
   display: 'swap',
 });
 
+const ICON_MAP: Record<string, LucideIcon> = {
+  Building2,
+  RefreshCcw,
+  Crown,
+  KeyRound,
+  LineChart,
+  Sparkles,
+  Home,
+  Tag,
+  ArrowRight,
+  Star,
+};
+
+function formatPrice(price: number) {
+  return `AED ${price.toLocaleString('en-US')}`;
+}
+
+function parseList(raw: any): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function HomePage() {
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [featured, setFeatured] = useState<any[]>([]);
+  const [ctas, setCtas] = useState<HomeCtaItem[]>([]);
+  const [categories, setCategories] = useState<PropertyCategoryItem[]>([]);
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [searchCategory, setSearchCategory] = useState('All Categories');
+  const [searchLocation, setSearchLocation] = useState('');
+
+  const [reviewForm, setReviewForm] = useState({
+    authorName: '',
+    location: '',
+    investment: '',
+    quote: '',
+    rating: 5,
+  });
+  const [reviewSent, setReviewSent] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
+  useEffect(() => {
+    async function loadHomeData() {
+      try {
+        const [servicesRes, propsRes, ctasRes, catsRes, reviewsRes] = await Promise.all([
+          fetch('/api/services'),
+          fetch('/api/properties'),
+          fetch('/api/ctas'),
+          fetch('/api/categories'),
+          fetch('/api/reviews'),
+        ]);
+
+        const servicesData = await servicesRes.json();
+        if (Array.isArray(servicesData)) {
+          setServices(servicesData.filter((s: ServiceItem) => s.active !== false));
+        }
+
+        const ctasData = await ctasRes.json();
+        if (Array.isArray(ctasData)) setCtas(ctasData);
+
+        const catsData = await catsRes.json();
+        if (Array.isArray(catsData)) {
+          setCategories(catsData.filter((c: PropertyCategoryItem) => c.name !== 'Holiday Home'));
+        }
+
+        const reviewsData = await reviewsRes.json();
+        if (Array.isArray(reviewsData)) setReviews(reviewsData);
+
+        const propsData = await propsRes.json();
+        if (Array.isArray(propsData)) {
+          const saleProps = propsData
+            .filter((p: any) => p.type !== 'Holiday Home')
+            .map((p: any) => {
+              const images = parseList(p.images);
+              return {
+                ...p,
+                images:
+                  images.length > 0
+                    ? images
+                    : ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=800&auto=format&fit=crop'],
+              };
+            });
+          const featuredOnes = saleProps.filter((p: any) => p.featured);
+          setFeatured((featuredOnes.length > 0 ? featuredOnes : saleProps).slice(0, 3));
+        }
+      } catch (err) {
+        console.error('Erreur chargement homepage:', err);
+      }
+    }
+    loadHomeData();
+  }, []);
+
+  const searchHref = (() => {
+    const params = new URLSearchParams();
+    if (searchLocation.trim()) params.set('location', searchLocation.trim());
+    if (searchCategory !== 'All Categories') params.set('type', searchCategory);
+    const qs = params.toString();
+    return qs ? `/properties?${qs}` : '/properties';
+  })();
+
+  async function submitReview(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reviewForm.authorName.trim() || !reviewForm.location.trim() || !reviewForm.quote.trim()) {
+      setReviewError('Please fill in your name, location and review.');
+      return;
+    }
+    setReviewError('');
+    setReviewSubmitting(true);
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reviewForm),
+      });
+      if (!res.ok) throw new Error('Failed');
+      setReviewSent(true);
+      setReviewForm({ authorName: '', location: '', investment: '', quote: '', rating: 5 });
+    } catch {
+      setReviewError('Unable to send your review. Please try again.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] font-sans selection:bg-[#4A151B] selection:text-[#F2EDE4] overflow-x-hidden">
-      {/* NAVBAR PARTAGÉE */}
       <Navbar />
 
-      {/* HERO SECTION AVEC BACKGROUND IMAGE & OVERLAY DE LISIBILITÉ */}
-      <section className="relative px-6 pt-24 pb-16 md:pt-32 md:pb-20 max-w-7xl mx-auto overflow-hidden rounded-3xl my-6 bg-cover bg-center shadow-lg" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1600&auto=format&fit=crop')` }}>
-        
-        {/* CALQUE D'OPACITÉ POUR ASSURER LE CONTRASTE DU TEXTE */}
+      {/* HERO */}
+      <section
+        className="relative px-6 pt-24 pb-16 md:pt-32 md:pb-20 max-w-7xl mx-auto overflow-hidden rounded-3xl my-6 bg-cover bg-center shadow-lg"
+        style={{ backgroundImage: `url('https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1600&auto=format&fit=crop')` }}
+      >
         <div className="absolute inset-0 bg-[#F2EDE4]/90 backdrop-blur-[2px]" />
 
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-5 gap-12 items-end">
@@ -42,9 +187,7 @@ export default function HomePage() {
             </span>
             <h1 className={`${fraunces.className} text-5xl md:text-6xl lg:text-7xl font-medium tracking-tight mb-6 leading-[1.05] text-[#2C181A]`}>
               Find your exceptional property in{' '}
-              <em className="italic text-[#4A151B] not-italic">
-                the heart of Dubai
-              </em>
+              <em className="italic text-[#4A151B] not-italic">the heart of Dubai</em>
             </h1>
             <p className="text-[#685248] text-lg max-w-xl font-light leading-relaxed">
               An exclusive selection of apartments, villas and townhouses, matched with the legal and financial guidance
@@ -67,17 +210,20 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Search bar */}
         <div className="relative z-10 w-full bg-[#EBE4DA]/95 border border-[#D8CEBE] p-4 md:p-5 rounded-2xl shadow-xl backdrop-blur-xl flex flex-col md:flex-row gap-3 items-center mt-14">
           <div className="flex items-center gap-3 w-full bg-[#F2EDE4] px-4 py-3 rounded-xl border border-[#D8CEBE]">
             <Building2 className="text-[#4A151B] w-5 h-5 shrink-0" />
-            <select className="bg-transparent w-full text-[#2C181A] outline-none cursor-pointer text-sm">
+            <select
+              value={searchCategory}
+              onChange={(e) => setSearchCategory(e.target.value)}
+              className="bg-transparent w-full text-[#2C181A] outline-none cursor-pointer text-sm"
+            >
               <option className="bg-[#F2EDE4]">All Categories</option>
-              <option className="bg-[#F2EDE4]">Apartments</option>
-              <option className="bg-[#F2EDE4]">Villas</option>
-              <option className="bg-[#F2EDE4]">Townhouses</option>
-              <option className="bg-[#F2EDE4]">Residential Plots</option>
-              <option className="bg-[#F2EDE4]">New Projects</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.name} className="bg-[#F2EDE4]">
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -85,13 +231,15 @@ export default function HomePage() {
             <MapPin className="text-[#4A151B] w-5 h-5 shrink-0" />
             <input
               type="text"
+              value={searchLocation}
+              onChange={(e) => setSearchLocation(e.target.value)}
               placeholder="Ex: Downtown, Palm Jumeirah..."
               className="bg-transparent w-full text-[#2C181A] outline-none placeholder:text-[#A8989A] text-sm"
             />
           </div>
 
           <Link
-            href="/properties"
+            href={searchHref}
             className="w-full md:w-auto bg-[#4A151B] text-[#F2EDE4] font-bold px-8 py-3.5 rounded-xl hover:bg-[#3B1115] transition flex items-center justify-center gap-2 shrink-0 shadow-md"
           >
             <Search className="w-5 h-5" />
@@ -100,171 +248,173 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CATEGORIES AVEC BACKGROUND DÉCORATIF CLAIR */}
-      <section className="relative px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE] bg-cover bg-center rounded-3xl my-6 overflow-hidden shadow-sm" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=1400&auto=format&fit=crop')` }}>
-        <div className="absolute inset-0 bg-[#F2EDE4]/92 backdrop-blur-[2px]" />
-        
-        <div className="relative z-10">
-          <Reveal>
-            <div className="flex justify-between items-end mb-12">
-              <div>
-                <h2 className={`${fraunces.className} text-2xl md:text-4xl font-medium tracking-tight text-[#2C181A]`}>Explore by category</h2>
-              </div>
-              <Link href="/properties" className="hidden sm:flex items-center gap-2 text-sm text-[#4A151B] hover:underline font-medium transition">
-                View all properties <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </Reveal>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { title: 'Apartments', desc: 'Panoramic views and high-end finishing', count: 'Exclusive listings' },
-              { title: 'Luxury Villas', desc: 'Privacy and contemporary design', count: 'Prestigious' },
-              { title: 'Townhouses', desc: 'Family-friendly modern communities', count: 'Communities' },
-              { title: 'Holiday Homes', desc: 'Premium seasonal rentals', count: 'Online booking' },
-            ].map((item, i) => (
-              <Reveal key={item.title} delay={i * 80}>
-                <div className="group relative bg-[#EBE4DA]/85 border border-[#D8CEBE] p-8 rounded-2xl hover:border-[#4A151B]/40 transition duration-300 cursor-pointer overflow-hidden shadow-sm h-full backdrop-blur-md">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#C5A880]/10 rounded-full blur-2xl group-hover:bg-[#C5A880]/20 transition" />
-                  <Home className="w-8 h-8 text-[#4A151B] mb-6 group-hover:scale-110 transition duration-300" />
-                  <h4 className="text-xl font-bold mb-2 text-[#2C181A]">{item.title}</h4>
-                  <p className="text-[#685248] text-sm mb-4 font-light">{item.desc}</p>
-                  <span className="text-xs text-[#C5A880] uppercase tracking-wider font-semibold">{item.count}</span>
-                </div>
-              </Reveal>
-            ))}
+      {/* QUICK ACTIONS / CTAs — from MySQL */}
+      <section className="px-6 py-10 max-w-7xl mx-auto">
+        <Reveal>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {ctas.map((cta, i) => {
+              const Icon = ICON_MAP[cta.icon] || ArrowRight;
+              return (
+                <Reveal key={cta.id} delay={i * 60}>
+                  <Link
+                    href={cta.href}
+                    className="group relative overflow-hidden rounded-2xl border border-[#D8CEBE] bg-[#EBE4DA] p-5 shadow-sm hover:border-[#4A151B]/50 hover:shadow-md transition duration-300 h-full flex flex-col"
+                  >
+                    <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-[#C5A880]/15 group-hover:bg-[#C5A880]/25 transition" />
+                    <div className="w-11 h-11 rounded-xl bg-[#F2EDE4] border border-[#D8CEBE] flex items-center justify-center mb-4 group-hover:border-[#4A151B]/30 transition">
+                      <Icon className="w-5 h-5 text-[#4A151B]" />
+                    </div>
+                    <h3 className="font-bold text-[#2C181A] text-sm mb-1 leading-snug">{cta.label}</h3>
+                    <p className="text-[11px] text-[#685248] font-light leading-relaxed mb-3 flex-1">
+                      {cta.description || 'Explore with Oravya'}
+                    </p>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#4A151B]">
+                      Continue <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
+                    </span>
+                  </Link>
+                </Reveal>
+              );
+            })}
           </div>
-        </div>
+        </Reveal>
       </section>
 
-      {/* PRIME LOCATIONS AVEC BACKGROUND DÉCORATIF CLAIR */}
-      <section className="relative px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE] bg-cover bg-center rounded-3xl my-6 overflow-hidden shadow-sm" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1400&auto=format&fit=crop')` }}>
-        <div className="absolute inset-0 bg-[#F2EDE4]/92 backdrop-blur-[2px]" />
+      {/* PROPERTY TYPES — from MySQL */}
+      <SectionBackdrop variant="soft" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE]">
+        <Reveal>
+          <div className="flex justify-between items-end mb-12">
+            <div>
+              <span className="text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-3 block">Property Types</span>
+              <h2 className={`${fraunces.className} text-2xl md:text-4xl font-medium tracking-tight text-[#2C181A]`}>
+                Explore by category
+              </h2>
+            </div>
+            <Link href="/properties" className="hidden sm:flex items-center gap-2 text-sm text-[#4A151B] hover:underline font-medium transition">
+              View all properties <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </Reveal>
 
-        <div className="relative z-10">
-          <Reveal>
-            <div className="max-w-2xl mb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {categories.slice(0, 8).map((item, i) => {
+            const Icon = ICON_MAP[item.icon] || Building2;
+            return (
+              <Reveal key={item.id} delay={i * 50}>
+                <Link
+                  href={`/properties?type=${encodeURIComponent(item.name)}`}
+                  className="group relative bg-[#EBE4DA]/85 border border-[#D8CEBE] p-7 rounded-2xl hover:border-[#4A151B]/40 transition duration-300 overflow-hidden shadow-sm h-full backdrop-blur-md block"
+                >
+                  <div className="absolute top-0 right-0 w-28 h-28 bg-[#C5A880]/10 rounded-full blur-2xl group-hover:bg-[#C5A880]/20 transition" />
+                  <Icon className="w-7 h-7 text-[#4A151B] mb-5 group-hover:scale-110 transition duration-300" />
+                  <h4 className="text-lg font-bold mb-2 text-[#2C181A]">{item.name}</h4>
+                  <p className="text-[#685248] text-xs mb-4 font-light leading-relaxed line-clamp-3">{item.description}</p>
+                  <span className="text-xs text-[#C5A880] uppercase tracking-wider font-semibold inline-flex items-center gap-1">
+                    Explore <ArrowRight className="w-3 h-3" />
+                  </span>
+                </Link>
+              </Reveal>
+            );
+          })}
+        </div>
+      </SectionBackdrop>
+
+      {/* OUR SERVICES */}
+      <section id="services" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE] scroll-mt-24">
+        <Reveal>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14">
+            <div className="max-w-2xl">
+              <span className="text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-3 block">Our Services</span>
               <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#2C181A]`}>
-                Invest in Dubai&apos;s most sought-after areas
+                Every stage of a Dubai property journey
               </h2>
               <p className="text-[#685248] font-light">
-                From iconic waterfronts to thriving business hubs, find properties where demand is highest.
+                Off-plan, resale, luxury, rentals and investment consultancy — managed end to end by Oravya.
               </p>
             </div>
-          </Reveal>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                name: 'Downtown Dubai',
-                desc: "Home to the Burj Khalifa and Dubai Mall. High capital appreciation and premium rental returns.",
-                properties: '45+ Properties',
-              },
-              {
-                name: 'Palm Jumeirah',
-                desc: "The world's most famous man-made island, offering ultra-luxury beachfront villas and residences.",
-                properties: '28+ Properties',
-              },
-              {
-                name: 'Dubai Marina',
-                desc: 'Vibrant waterfront community renowned for its skyscrapers, yacht clubs and luxury lifestyle.',
-                properties: '35+ Properties',
-              },
-            ].map((area, i) => (
-              <Reveal key={area.name} delay={i * 90}>
-                <div className="bg-[#EBE4DA]/85 border border-[#D8CEBE] p-8 rounded-2xl hover:border-[#4A151B]/40 transition flex flex-col justify-between shadow-sm h-full backdrop-blur-md">
-                  <div>
-                    <span className="text-xs text-[#C5A880] font-semibold uppercase tracking-wider">{area.properties}</span>
-                    <h3 className={`${fraunces.className} text-2xl mt-2 mb-3 text-[#2C181A]`}>{area.name}</h3>
-                    <p className="text-[#685248] text-sm font-light leading-relaxed mb-6">{area.desc}</p>
-                  </div>
-                  <Link href="/properties" className="inline-flex items-center gap-2 text-sm font-semibold text-[#4A151B] hover:underline transition">
-                    Explore area <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
-              </Reveal>
-            ))}
+            <Link href="/services" className="inline-flex items-center gap-2 text-sm font-semibold text-[#4A151B] hover:underline shrink-0">
+              View all services <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
+        </Reveal>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+          {services.map((service, i) => {
+            const Icon = ICON_MAP[service.icon] || Building2;
+            return (
+              <Reveal key={service.id} delay={i * 70}>
+                <Link
+                  href={`/contact?service=${encodeURIComponent(service.title)}`}
+                  className="h-full bg-[#EBE4DA]/80 border border-[#D8CEBE] p-6 rounded-2xl hover:border-[#4A151B]/40 transition flex flex-col shadow-sm group"
+                >
+                  <Icon className="w-7 h-7 text-[#4A151B] mb-5 group-hover:scale-110 transition" />
+                  <h3 className="font-bold text-[#2C181A] mb-2 leading-snug">{service.title}</h3>
+                  <p className="text-[#685248] text-xs font-light leading-relaxed mt-auto">{service.tagline}</p>
+                </Link>
+              </Reveal>
+            );
+          })}
         </div>
       </section>
 
-      {/* FEATURED PROJECTS AVEC IMAGES DE FOND RÉELLES */}
-      <section className="px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE]">
+      {/* FEATURED */}
+      <SectionBackdrop variant="villa" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE]">
         <Reveal>
           <div className="max-w-2xl mb-16">
             <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#2C181A]`}>
               Exceptional projects in Dubai
             </h2>
-            <p className="text-[#685248] font-light">A rigorous selection of prime locations to maximize your return on investment.</p>
+            <p className="text-[#685248] font-light">Live selection from our database — prime locations for strong returns.</p>
           </div>
         </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            { 
-              name: 'Burj Crown, Downtown', 
-              type: 'Luxury Apartment', 
-              price: 'Starting from AED 2.1M', 
-              loc: 'Downtown Dubai',
-              img: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=800&auto=format&fit=crop'
-            },
-            { 
-              name: 'Palm Beach Villas', 
-              type: 'Waterfront Villa', 
-              price: 'Starting from AED 14.5M', 
-              loc: 'Palm Jumeirah',
-              img: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?q=80&w=800&auto=format&fit=crop'
-            },
-            { 
-              name: 'Emaar South Townhouses', 
-              type: 'Family Townhouse', 
-              price: 'Starting from AED 1.8M', 
-              loc: 'Dubai South',
-              img: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?q=80&w=800&auto=format&fit=crop'
-            },
-          ].map((property, i) => (
-            <Reveal key={property.name} delay={i * 90}>
-              <div className="bg-[#EBE4DA]/90 border border-[#D8CEBE] rounded-2xl overflow-hidden hover:border-[#4A151B]/40 transition group shadow-sm h-full flex flex-col justify-between">
-                <div>
-                  {/* IMAGE DE FOND AVEC OVERLAY LÉGER POUR LA LISIBILITÉ */}
-                  <div className="h-56 relative bg-cover bg-center flex items-center justify-center" style={{ backgroundImage: `url('${property.img}')` }}>
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition duration-300" />
-                    <span className="absolute top-4 left-4 bg-[#4A151B] text-[#F2EDE4] text-xs font-bold px-3 py-1 rounded-full z-10 shadow-md">
-                      Exclusive
-                    </span>
+        {featured.length === 0 ? (
+          <div className="bg-[#EBE4DA]/70 border border-[#D8CEBE] rounded-2xl p-10 text-center">
+            <p className="text-[#685248] text-sm mb-4">No properties in the database yet.</p>
+            <Link href="/properties" className="text-sm font-semibold text-[#4A151B] hover:underline">
+              Browse properties
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {featured.map((property, i) => (
+              <Reveal key={property.id} delay={i * 90}>
+                <div className="bg-[#EBE4DA]/90 border border-[#D8CEBE] rounded-2xl overflow-hidden hover:border-[#4A151B]/40 transition group shadow-sm h-full flex flex-col justify-between">
+                  <div>
+                    <div className="h-56 relative bg-cover bg-center" style={{ backgroundImage: `url('${property.images[0]}')` }}>
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition duration-300" />
+                      <span className="absolute top-4 left-4 bg-[#4A151B] text-[#F2EDE4] text-xs font-bold px-3 py-1 rounded-full z-10 shadow-md">
+                        {property.status || 'Exclusive'}
+                      </span>
+                    </div>
+                    <div className="p-6">
+                      <span className="text-xs text-[#C5A880] uppercase tracking-wider font-semibold">{property.type}</span>
+                      <h3 className="text-lg font-bold mt-1 mb-2 text-[#2C181A] group-hover:text-[#4A151B] transition">{property.name}</h3>
+                      <p className="text-[#685248] text-sm flex items-center gap-1 mb-4">
+                        <MapPin className="w-4 h-4 text-[#8C6D53]" /> {property.location}
+                      </p>
+                    </div>
                   </div>
-
-                  <div className="p-6">
-                    <span className="text-xs text-[#C5A880] uppercase tracking-wider font-semibold">{property.type}</span>
-                    <h3 className="text-lg font-bold mt-1 mb-2 text-[#2C181A] group-hover:text-[#4A151B] transition">{property.name}</h3>
-                    <p className="text-[#685248] text-sm flex items-center gap-1 mb-4">
-                      <MapPin className="w-4 h-4 text-[#8C6D53]" /> {property.loc}
-                    </p>
+                  <div className="p-6 pt-0">
+                    <div className="flex justify-between items-center pt-4 border-t border-[#D8CEBE]">
+                      <span className="font-bold text-[#4A151B]">{formatPrice(property.price)}</span>
+                      <Link
+                        href={`/properties/${property.id}`}
+                        className="text-xs bg-[#F2EDE4] hover:bg-[#4A151B] hover:text-[#F2EDE4] border border-[#D8CEBE] text-[#2C181A] px-3 py-2 rounded-lg transition font-medium"
+                      >
+                        Discover
+                      </Link>
+                    </div>
                   </div>
                 </div>
+              </Reveal>
+            ))}
+          </div>
+        )}
+      </SectionBackdrop>
 
-                <div className="p-6 pt-0">
-                  <div className="flex justify-between items-center pt-4 border-t border-[#D8CEBE]">
-                    <span className="font-bold text-[#4A151B]">{property.price}</span>
-                    <Link
-                      href="/properties"
-                      className="text-xs bg-[#F2EDE4] hover:bg-[#4A151B] hover:text-[#F2EDE4] border border-[#D8CEBE] text-[#2C181A] px-3 py-2 rounded-lg transition font-medium"
-                    >
-                      Discover
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* SERVICES AVEC BACKGROUND DÉCORATIF CLAIR */}
-      <section className="relative px-6 py-20 bg-[#E6DDD0]/60 border-y border-[#D8CEBE] bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1577495508048-b635879837f1?q=80&w=1400&auto=format&fit=crop')` }}>
-        <div className="absolute inset-0 bg-[#F2EDE4]/92 backdrop-blur-[2px]" />
-
-        <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      {/* REMOTE CTA */}
+      <SectionBackdrop variant="lobby" rounded={false} className="px-6 py-20 border-y border-[#D8CEBE]">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <Reveal>
             <div>
               <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight mb-6 text-[#2C181A]`}>
@@ -272,25 +422,18 @@ export default function HomePage() {
               </h2>
               <p className="text-[#685248] mb-8 font-light leading-relaxed">
                 Whether you want to invest in a new off-plan project in Dubai, purchase a holiday home, or book a seasonal
-                rental, our experts guide you step by step. Schedule a direct online meeting in just a few clicks.
+                rental, our experts guide you step by step.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link
-                  href="/contact"
-                  className="bg-[#4A151B] text-[#F2EDE4] font-bold px-6 py-3.5 rounded-xl hover:bg-[#3B1115] transition text-center shadow-md"
-                >
+                <Link href="/contact" className="bg-[#4A151B] text-[#F2EDE4] font-bold px-6 py-3.5 rounded-xl hover:bg-[#3B1115] transition text-center shadow-md">
                   Book an online meeting
                 </Link>
-                <Link
-                  href="/holiday-homes"
-                  className="border border-[#C5A880] text-[#2C181A] font-semibold px-6 py-3.5 rounded-xl hover:bg-[#F2EDE4] transition text-center"
-                >
+                <Link href="/holiday-homes" className="border border-[#C5A880] text-[#2C181A] font-semibold px-6 py-3.5 rounded-xl hover:bg-[#F2EDE4] transition text-center">
                   Book a holiday home
                 </Link>
               </div>
             </div>
           </Reveal>
-
           <Reveal delay={100}>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-[#EBE4DA] border border-[#D8CEBE] p-6 rounded-2xl flex flex-col justify-between shadow-sm">
@@ -310,38 +453,26 @@ export default function HomePage() {
             </div>
           </Reveal>
         </div>
-      </section>
+      </SectionBackdrop>
 
-      {/* WHY ORAVYA */}
+      {/* WHY */}
       <section className="px-6 py-20 max-w-7xl mx-auto">
         <Reveal>
           <div className="max-w-2xl mb-16">
             <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#2C181A]`}>
               Why global investors choose Oravya
             </h2>
-            <p className="text-[#685248] font-light">
-              End-to-end advisory services tailored to international high-net-worth individuals.
-            </p>
+            <p className="text-[#685248] font-light">End-to-end advisory tailored to international high-net-worth individuals.</p>
           </div>
         </Reveal>
-
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#D8CEBE] border-t border-b border-[#D8CEBE]">
           {[
-            {
-              title: 'Off-market access',
-              desc: 'Get exclusive access to private listings and prime off-plan units before public release.',
-            },
-            {
-              title: 'Legal & financial guidance',
-              desc: 'Full assistance with property registration, golden visa applications, and tax structuring.',
-            },
-            {
-              title: 'Property management',
-              desc: 'Complete post-purchase management, rental leasing, and holiday home operations.',
-            },
+            { title: 'Off-market access', desc: 'Private listings and prime off-plan units before public release.' },
+            { title: 'Legal & financial guidance', desc: 'Registration, golden visa applications, and tax structuring.' },
+            { title: 'Property management', desc: 'Post-purchase management, leasing, and holiday home operations.' },
           ].map((item, i) => (
             <Reveal key={item.title} delay={i * 90}>
-              <div className="p-8 md:px-8 md:py-10 first:pt-8 md:first:pt-10">
+              <div className="p-8 md:px-8 md:py-10">
                 <CheckCircle2 className="w-6 h-6 text-[#4A151B] mb-4" />
                 <h3 className="text-lg font-bold mb-2 text-[#2C181A]">{item.title}</h3>
                 <p className="text-[#685248] text-sm font-light leading-relaxed">{item.desc}</p>
@@ -351,11 +482,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FAQ SECTION AVEC BACKGROUND DÉCORATIF CLAIR */}
-      <section id="faqs" className="relative px-6 py-20 max-w-5xl mx-auto border-t border-[#D8CEBE] scroll-mt-24 bg-cover bg-center rounded-3xl my-6 overflow-hidden shadow-sm" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1400&auto=format&fit=crop')` }}>
-        <div className="absolute inset-0 bg-[#F2EDE4]/92 backdrop-blur-[2px]" />
-
-        <div className="relative z-10">
+      {/* FAQ */}
+      <SectionBackdrop variant="night" className="px-6 py-20 max-w-5xl mx-auto border-t border-[#D8CEBE] scroll-mt-24" >
+        <div id="faqs">
           <Reveal>
             <div className="text-center max-w-2xl mx-auto mb-16">
               <span className="text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-3 block">Frequently Asked Questions</span>
@@ -364,25 +493,12 @@ export default function HomePage() {
               </h2>
             </div>
           </Reveal>
-
           <div className="space-y-4">
             {[
-              {
-                q: "Can foreign nationals own 100% property in Dubai?",
-                a: "Yes. Foreigners and non-residents can have 100% absolute freehold ownership of properties in designated investment zones across Dubai."
-              },
-              {
-                q: "What are the property taxes and rental yields in Dubai?",
-                a: "Dubai offers 0% property tax, 0% capital gains tax, and 0% personal income tax. Rental yields are among the highest globally, averaging between 8% to 12% net per year depending on the location."
-              },
-              {
-                q: "How does property investment qualify for the UAE Golden Visa?",
-                a: "Investing a minimum of AED 2 million in real estate (either ready or off-plan properties) qualifies the investor, their spouse, and children for the prestigious 10-year UAE Golden Residency Visa."
-              },
-              {
-                q: "Can I buy a property remotely from abroad?",
-                a: "Absolutely. Oravya handles remote transactions securely, from virtual property viewings and digital contract signing to bank account setup and title deed registration."
-              },
+              { q: 'Can foreign nationals own 100% property in Dubai?', a: 'Yes. Foreigners and non-residents can have 100% freehold ownership in designated investment zones across Dubai.' },
+              { q: 'What are the property taxes and rental yields in Dubai?', a: 'Dubai offers 0% property tax, 0% capital gains tax, and 0% personal income tax. Rental yields average 8–12% net depending on location.' },
+              { q: 'How does property investment qualify for the UAE Golden Visa?', a: 'Investing a minimum of AED 2 million in real estate qualifies the investor and family for a 10-year UAE Golden Residency Visa.' },
+              { q: 'Can I buy a property remotely from abroad?', a: 'Absolutely. Oravya handles remote transactions from virtual viewings to title deed registration.' },
             ].map((faq, i) => (
               <Reveal key={faq.q} delay={i * 80}>
                 <div className="bg-[#EBE4DA]/85 border border-[#D8CEBE] p-6 md:p-8 rounded-2xl shadow-sm backdrop-blur-md">
@@ -393,9 +509,9 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </SectionBackdrop>
 
-      {/* TESTIMONIALS / CLIENT REVIEWS */}
+      {/* TESTIMONIALS + SUBMIT REVIEW */}
       <section id="testimonials" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE] scroll-mt-24">
         <Reveal>
           <div className="text-center max-w-2xl mx-auto mb-16">
@@ -403,57 +519,122 @@ export default function HomePage() {
             <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#2C181A]`}>
               Trusted by global investors &amp; homeowners
             </h2>
+            <p className="text-[#685248] text-sm font-light mt-3">Only approved reviews appear here. Share yours below.</p>
           </div>
         </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            {
-              quote: "Omayma and the Oravya team made acquiring our penthouse in Downtown Dubai completely seamless. Their market insight and legal guidance gave us total confidence from abroad.",
-              author: "Alexander V.",
-              location: "London, UK",
-              investment: "Downtown Dubai Investor"
-            },
-            {
-              quote: "Professionalism at its finest. No high-pressure tactics, just pure facts and exceptional off-market access. Our rental yields have exceeded projections.",
-              author: "Marc & Sophie D.",
-              location: "Paris, France",
-              investment: "Palm Jumeirah Villa Owners"
-            },
-            {
-              quote: "As a first-time investor in Dubai, I needed a partner I could trust blindly. Oravya handled everything from bank account setup to golden visa processing.",
-              author: "Tariq M.",
-              location: "Riyadh, Saudi Arabia",
-              investment: "Multi-Unit Off-Plan Investor"
-            },
-          ].map((review, i) => (
-            <Reveal key={review.author} delay={i * 90}>
-              <div className="bg-[#EBE4DA]/80 border border-[#D8CEBE] p-8 rounded-2xl shadow-sm flex flex-col justify-between h-full">
-                <div>
-                  <div className="flex gap-1 mb-4 text-[#C5A880]">
-                    {[...Array(5)].map((_, idx) => (
-                      <span key={idx} className="text-lg">★</span>
-                    ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          {reviews.length === 0 ? (
+            <p className="text-sm text-[#8C6D53] col-span-3 text-center">No approved reviews yet.</p>
+          ) : (
+            reviews.slice(0, 6).map((review, i) => (
+              <Reveal key={review.id} delay={i * 90}>
+                <div className="bg-[#EBE4DA]/80 border border-[#D8CEBE] p-8 rounded-2xl shadow-sm flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex gap-1 mb-4 text-[#C5A880]">
+                      {[...Array(review.rating || 5)].map((_, idx) => (
+                        <Star key={idx} className="w-4 h-4 fill-[#C5A880]" />
+                      ))}
+                    </div>
+                    <p className="text-[#685248] text-sm font-light leading-relaxed italic mb-6">&ldquo;{review.quote}&rdquo;</p>
                   </div>
-                  <p className="text-[#685248] text-sm font-light leading-relaxed italic mb-6">
-                    &ldquo;{review.quote}&rdquo;
-                  </p>
+                  <div className="pt-4 border-t border-[#D8CEBE]">
+                    <p className="font-bold text-[#2C181A] text-sm">{review.authorName}</p>
+                    <p className="text-xs text-[#8C6D53]">
+                      {review.location}
+                      {review.investment ? (
+                        <>
+                          {' '}
+                          • <span className="font-medium text-[#4A151B]">{review.investment}</span>
+                        </>
+                      ) : null}
+                    </p>
+                  </div>
                 </div>
-                <div className="pt-4 border-t border-[#D8CEBE]">
-                  <p className="font-bold text-[#2C181A] text-sm">{review.author}</p>
-                  <p className="text-xs text-[#8C6D53]">{review.location} • <span className="font-medium text-[#4A151B]">{review.investment}</span></p>
-                </div>
-              </div>
-            </Reveal>
-          ))}
+              </Reveal>
+            ))
+          )}
         </div>
+
+        <Reveal>
+          <div className="max-w-2xl mx-auto bg-[#EBE4DA]/90 border border-[#D8CEBE] rounded-3xl p-8 shadow-sm">
+            <h3 className={`${fraunces.className} text-2xl text-[#2C181A] mb-2`}>Share your experience</h3>
+            <p className="text-sm text-[#685248] font-light mb-6">
+              Your review is submitted for admin approval before it appears on the website.
+            </p>
+            {reviewSent ? (
+              <div className="text-center py-8">
+                <CheckCircle2 className="w-12 h-12 text-[#4A151B] mx-auto mb-4" />
+                <p className="font-semibold text-[#2C181A] mb-2">Thank you — review received</p>
+                <p className="text-sm text-[#685248]">It will appear once approved by Oravya.</p>
+                <button onClick={() => setReviewSent(false)} className="mt-4 text-sm font-semibold text-[#4A151B] hover:underline">
+                  Submit another
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={submitReview} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Your name"
+                    value={reviewForm.authorName}
+                    onChange={(e) => setReviewForm({ ...reviewForm, authorName: e.target.value })}
+                    className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#4A151B]"
+                  />
+                  <input
+                    type="text"
+                    placeholder="City, Country"
+                    value={reviewForm.location}
+                    onChange={(e) => setReviewForm({ ...reviewForm, location: e.target.value })}
+                    className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#4A151B]"
+                  />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Investment type (optional)"
+                  value={reviewForm.investment}
+                  onChange={(e) => setReviewForm({ ...reviewForm, investment: e.target.value })}
+                  className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#4A151B]"
+                />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs uppercase tracking-wider text-[#8C6D53] font-medium">Rating</span>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setReviewForm({ ...reviewForm, rating: n })}
+                      className="p-1"
+                    >
+                      <Star className={`w-5 h-5 ${n <= reviewForm.rating ? 'fill-[#C5A880] text-[#C5A880]' : 'text-[#D8CEBE]'}`} />
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  rows={4}
+                  placeholder="Your review..."
+                  value={reviewForm.quote}
+                  onChange={(e) => setReviewForm({ ...reviewForm, quote: e.target.value })}
+                  className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#4A151B] resize-none"
+                />
+                {reviewError && <p className="text-sm text-red-600">{reviewError}</p>}
+                <button
+                  type="submit"
+                  disabled={reviewSubmitting}
+                  className="w-full flex items-center justify-center gap-2 bg-[#4A151B] text-[#F2EDE4] font-bold px-6 py-3.5 rounded-xl hover:bg-[#3B1115] transition shadow-md disabled:opacity-60"
+                >
+                  <Send className="w-4 h-4" /> {reviewSubmitting ? 'Sending...' : 'Submit for approval'}
+                </button>
+              </form>
+            )}
+          </div>
+        </Reveal>
       </section>
 
-      {/* FOOTER */}
       <footer className="px-6 py-12 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center text-sm text-[#8C6D53] border-t border-[#D8CEBE]">
         <p>© 2026 Oravya Real Estate. All rights reserved. Dubai, UAE.</p>
         <div className="flex gap-6 mt-4 md:mt-0">
           <Link href="/properties" className="hover:text-[#4A151B] transition">Properties</Link>
+          <Link href="/services" className="hover:text-[#4A151B] transition">Services</Link>
           <Link href="/holiday-homes" className="hover:text-[#4A151B] transition">Holiday Homes</Link>
           <Link href="/contact" className="hover:text-[#4A151B] transition">Contact</Link>
         </div>

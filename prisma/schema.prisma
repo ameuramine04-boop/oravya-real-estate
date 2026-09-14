@@ -45,6 +45,53 @@ model Meeting {
   date      String
   time      String
   message   String?
-  status    String   @default("PENDING")
+  status    String   @default("Pending")
   createdAt DateTime @default(now())
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  title       String
+  tagline     String
+  description String?  @db.Text
+  icon        String   @default("Building2")
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  authorName  String
+  location    String
+  investment  String?
+  quote       String   @db.Text
+  rating      Int      @default(5)
+  status      String   @default("Pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model HomeCta {
+  id          String   @id @default(uuid())
+  label       String
+  href        String
+  description String?
+  icon        String   @default("ArrowRight")
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PropertyCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String   @db.Text
+  icon        String   @default("Building2")
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

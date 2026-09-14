@@ -16,7 +16,8 @@ import {
   UserPlus,
   ShieldAlert,
   Info,
-  Star
+  Star,
+  Briefcase,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -92,6 +93,10 @@ export default function Navbar() {
           <Link href="/holiday-homes" className="flex items-center gap-1.5 hover:text-[#4A151B] transition py-1 group">
             <Home className="w-4 h-4 text-[#8C6D53] group-hover:text-[#4A151B] transition" />
             <span>Holiday Homes</span>
+          </Link>
+          <Link href="/services" className="flex items-center gap-1.5 hover:text-[#4A151B] transition py-1 group">
+            <Briefcase className="w-4 h-4 text-[#8C6D53] group-hover:text-[#4A151B] transition" />
+            <span>Services</span>
           </Link>
           <Link href="/about" className="flex items-center gap-1.5 hover:text-[#4A151B] transition py-1 group">
             <Info className="w-4 h-4 text-[#8C6D53] group-hover:text-[#4A151B] transition" />

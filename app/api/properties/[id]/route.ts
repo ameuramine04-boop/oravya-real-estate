@@ -1,6 +1,26 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// GET : Récupérer une propriété par id
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const property = await prisma.property.findUnique({ where: { id } });
+
+    if (!property) {
+      return NextResponse.json({ error: 'Propriété introuvable' }, { status: 404 });
+    }
+
+    return NextResponse.json(property, { status: 200 });
+  } catch (error) {
+    console.error('Erreur GET property:', error);
+    return NextResponse.json({ error: 'Erreur lors de la récupération' }, { status: 500 });
+  }
+}
+
 // PUT : Modifier une propriété existante
 export async function PUT(
   request: Request,

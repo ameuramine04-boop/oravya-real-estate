@@ -1,11 +1,24 @@
-export type PropertyType = 'Apartment' | 'Villa' | 'Townhouse' | 'Penthouse' | 'Plot' | 'Holiday Home';
+export type PropertyType =
+  | 'Apartment'
+  | 'Penthouse'
+  | 'Villa'
+  | 'Townhouse'
+  | 'Duplex'
+  | 'Triplex'
+  | 'Mansion'
+  | 'Serviced Apartment'
+  | 'Full Floor'
+  | 'Waterfront Estate'
+  | 'Land / Plot'
+  | 'Plot'
+  | 'Holiday Home';
 export type PropertyStatus = 'Off-Plan' | 'Ready' | 'Available' | 'Booked';
 
 export interface ItemProperty {
   id: string;
   name: string;
   location: string;
-  type: PropertyType;
+  type: PropertyType | string;
   price: number; // AED — nightly rate for holiday homes, sale price otherwise
   beds: number;
   baths: number;
@@ -45,6 +58,46 @@ export interface UserAccount {
   name: string;
   email: string;
   role: 'ADMIN' | 'CLIENT';
+}
+
+export interface ServiceItem {
+  id: string;
+  title: string;
+  tagline: string;
+  description?: string;
+  icon: string;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface ReviewItem {
+  id: string;
+  authorName: string;
+  location: string;
+  investment?: string;
+  quote: string;
+  rating: number;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  createdAt?: string;
+}
+
+export interface HomeCtaItem {
+  id: string;
+  label: string;
+  href: string;
+  description?: string;
+  icon: string;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface PropertyCategoryItem {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  sortOrder: number;
+  active: boolean;
 }
 
 export const AMENITY_OPTIONS = [

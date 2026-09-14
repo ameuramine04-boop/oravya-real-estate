@@ -5,9 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Fraunces } from 'next/font/google';
-import { MapPin, BedDouble, Bath, Maximize, CheckCircle2, Calendar, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { MapPin, CheckCircle2, Calendar, ArrowLeft, ShieldCheck } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import { getStoredItems, saveStoredBooking, ItemProperty } from '@/lib/data';
+import { saveStoredBooking } from '@/lib/data';
 
 const fraunces = Fraunces({ subsets: ['latin'], weight: ['500', '600'], display: 'swap' });
 
@@ -16,10 +16,10 @@ export default function HolidayDetail() {
   const router = useRouter();
   const id = params?.id as string;
 
-  const [holiday, setHoliday] = useState<ItemProperty | null>(null);
+  const [holiday, setHoliday] = useState<any | null>(null);
   const [activeImage, setActiveImage] = useState<string>('');
+  const [loading, setLoading] = useState(true);
 
-  // États de l'agenda de réservation
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [clientName, setClientName] = useState('');
@@ -28,13 +28,55 @@ export default function HolidayDetail() {
   const [bookedSuccess, setBookedSuccess] = useState(false);
 
   useEffect(() => {
-    const holidays = getStoredItems('oravya_holidays');
-    const found = holidays.find(h => h.id === id);
-    if (found) {
-      setHoliday(found);
-      setActiveImage(found.images?.[0] || 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750');
+    async function fetchHoliday() {
+      try {
+        const res = await fetch(`/api/properties/${id}`);
+        if (!res.ok) {
+          setHoliday(null);
+          return;
+        }
+        const found = await res.json();
+        if (found.type !== 'Holiday Home') {
+          setHoliday(null);
+          return;
+        }
+
+        let imgs = ['https://images.unsplash.com/photo-1512917774080-9991f1c4c750'];
+        try {
+          if (found.images) {
+            const parsed = typeof found.images === 'string' ? JSON.parse(found.images) : found.images;
+            if (Array.isArray(parsed) && parsed.length > 0) imgs = parsed;
+          }
+        } catch (e) {}
+
+        let ams: string[] = [];
+        try {
+          if (found.amenities) {
+            ams = typeof found.amenities === 'string' ? JSON.parse(found.amenities) : found.amenities;
+          }
+        } catch (e) {}
+
+        const formatted = { ...found, images: imgs, amenities: ams };
+        setHoliday(formatted);
+        setActiveImage(imgs[0]);
+      } catch (err) {
+        console.error('Erreur chargement holiday home:', err);
+        setHoliday(null);
+      } finally {
+        setLoading(false);
+      }
     }
+
+    if (id) fetchHoliday();
   }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] flex flex-col items-center justify-center p-6">
+        <p className="text-sm text-[#8C6D53]">Chargement depuis MySQL...</p>
+      </div>
+    );
+  }
 
   if (!holiday) {
     return (
@@ -47,7 +89,6 @@ export default function HolidayDetail() {
     );
   }
 
-  // Calcul dynamique des nuits et du prix total
   const calculateNights = () => {
     if (!checkIn || !checkOut) return 1;
     const start = new Date(checkIn);
@@ -65,17 +106,14 @@ export default function HolidayDetail() {
 
     saveStoredBooking({
       id: 'book-' + Date.now(),
-      itemId: holiday.id,
-      itemName: holiday.name,
-      itemType: 'Holiday Home',
       clientName,
       clientEmail,
       clientPhone,
+      itemName: holiday.name,
       checkIn,
       checkOut,
       totalPrice,
       status: 'Confirmed',
-      createdAt: new Date().toISOString().split('T')[0]
     });
 
     setBookedSuccess(true);
@@ -90,7 +128,6 @@ export default function HolidayDetail() {
           <ArrowLeft className="w-4 h-4" /> Retour aux Holiday Homes
         </button>
 
-        {/* TITRE & PRIX */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
           <div>
             <span className="text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-2 block">Short-Term Luxury Stay</span>
@@ -107,15 +144,14 @@ export default function HolidayDetail() {
           </div>
         </div>
 
-        {/* GALERIE PHOTOS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
           <div className="lg:col-span-2 h-[420px] md:h-[500px] rounded-3xl overflow-hidden relative border border-[#D8CEBE] shadow-md bg-[#DFD6C9]">
             <Image src={activeImage} alt={holiday.name} fill className="object-cover" priority />
           </div>
           <div className="flex lg:flex-col gap-4 overflow-x-auto pb-2">
-            {holiday.images?.map((img, idx) => (
-              <div 
-                key={idx} 
+            {holiday.images?.map((img: string, idx: number) => (
+              <div
+                key={idx}
                 onClick={() => setActiveImage(img)}
                 className={`h-[140px] rounded-2xl overflow-hidden relative border cursor-pointer shrink-0 w-44 lg:w-full transition ${
                   activeImage === img ? 'border-[#4A151B] ring-2 ring-[#4A151B]/20' : 'border-[#D8CEBE]'
@@ -127,9 +163,7 @@ export default function HolidayDetail() {
           </div>
         </div>
 
-        {/* CONTENU & AGENDA DE RÉSERVATION */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
-          
           <div className="lg:col-span-2 space-y-8">
             <div className="bg-[#EBE4DA] border border-[#D8CEBE] p-8 rounded-3xl shadow-sm">
               <h3 className={`${fraunces.className} text-2xl text-[#2C181A] mb-4`}>Détails du logement</h3>
@@ -157,7 +191,7 @@ export default function HolidayDetail() {
                 <>
                   <h4 className={`${fraunces.className} text-xl text-[#2C181A] mt-8 mb-4`}>Équipements inclus</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {holiday.amenities.map((item, idx) => (
+                    {holiday.amenities.map((item: string, idx: number) => (
                       <div key={idx} className="flex items-center gap-2 bg-[#F2EDE4] border border-[#D8CEBE] px-4 py-2.5 rounded-xl text-xs font-medium text-[#2C181A]">
                         <CheckCircle2 className="w-4 h-4 text-[#4A151B]" /> {item}
                       </div>
@@ -168,14 +202,13 @@ export default function HolidayDetail() {
             </div>
           </div>
 
-          {/* AGENDA & FORMULAIRE DE RÉSERVATION */}
           <div className="bg-[#EBE4DA] border border-[#D8CEBE] p-8 rounded-3xl shadow-xl sticky top-28">
             {bookedSuccess ? (
-              <div className="py-8 text-center animate-in fade-in">
+              <div className="py-8 text-center">
                 <CheckCircle2 className="w-14 h-14 text-[#4A151B] mx-auto mb-4" />
                 <h3 className={`${fraunces.className} text-2xl text-[#2C181A] mb-2`}>Réservation enregistrée !</h3>
                 <p className="text-xs text-[#685248] font-light mb-6 leading-relaxed">
-                  Félicitations {clientName}. Votre séjour du {checkIn} au {checkOut} est bien validé. Retrouvez tous les détails dans l'agenda de l'administrateur.
+                  Félicitations {clientName}. Votre séjour du {checkIn} au {checkOut} est bien validé.
                 </p>
                 <button
                   onClick={() => setBookedSuccess(false)}
@@ -187,9 +220,8 @@ export default function HolidayDetail() {
             ) : (
               <form onSubmit={handleBooking} className="space-y-4">
                 <h3 className={`${fraunces.className} text-2xl text-[#2C181A] mb-1`}>Réserver vos dates</h3>
-                <p className="text-xs text-[#685248] mb-6">Sélectionnez votre agenda d'arrivée et de départ.</p>
+                <p className="text-xs text-[#685248] mb-6">Sélectionnez votre agenda d&apos;arrivée et de départ.</p>
 
-                {/* SÉLECTION DE L'AGENDA (DATES) */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] uppercase tracking-wider text-[#8C6D53] font-semibold mb-1">Arrivée</label>
@@ -277,7 +309,6 @@ export default function HolidayDetail() {
               <span>Garantie de séjour sécurisé par Oravya Holiday Homes Dubai.</span>
             </div>
           </div>
-
         </div>
       </main>
     </div>
