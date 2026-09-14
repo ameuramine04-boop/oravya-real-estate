@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  const redirectUri = 'http://localhost:3000/api/auth/google/callback';
+
+  const url = new URL(request.url);
+  const redirectUri = `${url.origin}/api/auth/google/callback`;
 
   // URL officielle de Google OAuth
   const googleUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
