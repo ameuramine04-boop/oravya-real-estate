@@ -28,6 +28,15 @@ export async function GET(request: Request) {
     await ensureCategories();
     const { searchParams } = new URL(request.url);
     const all = searchParams.get('all') === '1';
+
+    // Si on demande toutes les catégories (y compris inactives), on sécurise pour l'admin
+    if (all) {
+      const authHeader = request.headers.get('x-user-role');
+      if (!authHeader || authHeader !== 'ADMIN') {
+        return NextResponse.json({ error: 'Accès non autorisé.' }, { status: 403 });
+      }
+    }
+
     const categories = await prisma.propertyCategory.findMany({
       where: all ? undefined : { active: true },
       orderBy: { sortOrder: 'asc' },
@@ -41,20 +50,32 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    // Vérification de sécurité : Seul un administrateur peut créer une catégorie
+    const authHeader = request.headers.get('x-user-role');
+    if (!authHeader || authHeader !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { name, description, icon, sortOrder, active } = body;
+    
     if (!name || !description) {
       return NextResponse.json({ error: 'Name and description required' }, { status: 400 });
     }
+
     const item = await prisma.propertyCategory.create({
       data: {
-        name,
-        description,
+        name: name.trim(),
+        description: description.trim(),
         icon: icon || 'Building2',
         sortOrder: parseInt(sortOrder) || 0,
         active: active !== undefined ? Boolean(active) : true,
       },
     });
+
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
     console.error('Erreur POST category:', error);

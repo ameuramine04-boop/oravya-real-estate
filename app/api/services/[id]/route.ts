@@ -1,12 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// PUT : Modifier un service existant
+// PUT : Modifier un service existant (Réservé aux administrateurs)
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Vérification de sécurité : Seul un administrateur peut modifier un service
+    const authHeader = request.headers.get('x-user-role');
+    if (!authHeader || authHeader !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { title, tagline, description, icon, sortOrder, active } = body;
@@ -14,12 +23,12 @@ export async function PUT(
     const updatedService = await prisma.service.update({
       where: { id },
       data: {
-        title,
-        tagline,
-        description: description || '',
-        icon: icon || 'Building2',
-        sortOrder: parseInt(sortOrder) || 0,
-        active: active !== undefined ? Boolean(active) : true,
+        ...(title !== undefined && { title: title.trim() }),
+        ...(tagline !== undefined && { tagline: tagline.trim() }),
+        ...(description !== undefined && { description: description.trim() }),
+        ...(icon !== undefined && { icon: icon || 'Building2' }),
+        ...(sortOrder !== undefined && { sortOrder: parseInt(sortOrder) || 0 }),
+        ...(active !== undefined && { active: Boolean(active) }),
       },
     });
 
@@ -30,12 +39,21 @@ export async function PUT(
   }
 }
 
-// DELETE : Supprimer un service de MySQL
+// DELETE : Supprimer un service de MySQL (Réservé aux administrateurs)
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Vérification de sécurité : Seul un administrateur peut supprimer un service
+    const authHeader = request.headers.get('x-user-role');
+    if (!authHeader || authHeader !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
 
     await prisma.service.delete({

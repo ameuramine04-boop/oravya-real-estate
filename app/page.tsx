@@ -173,82 +173,153 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] font-sans selection:bg-[#4A151B] selection:text-[#F2EDE4] overflow-x-hidden">
       <Navbar />
 
-      {/* HERO */}
-      <section
-        className="relative px-6 pt-24 pb-16 md:pt-32 md:pb-20 max-w-7xl mx-auto overflow-hidden rounded-3xl my-6 bg-cover bg-center shadow-lg"
-        style={{ backgroundImage: `url('https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1600&auto=format&fit=crop')` }}
-      >
-        <div className="absolute inset-0 bg-[#F2EDE4]/90 backdrop-blur-[2px]" />
-
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-5 gap-12 items-end">
-          <div className="lg:col-span-3">
-            <span className="inline-block text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-6 border-l-2 border-[#C5A880] pl-3">
-              Luxury &amp; Investment Real Estate, Dubai
-            </span>
-            <h1 className={`${fraunces.className} text-5xl md:text-6xl lg:text-7xl font-medium tracking-tight mb-6 leading-[1.05] text-[#2C181A]`}>
-              Find your exceptional property in{' '}
-              <em className="italic text-[#4A151B] not-italic">the heart of Dubai</em>
-            </h1>
-            <p className="text-[#685248] text-lg max-w-xl font-light leading-relaxed">
-              An exclusive selection of apartments, villas and townhouses, matched with the legal and financial guidance
-              international buyers need to invest with confidence.
-            </p>
-          </div>
-
-          <div className="lg:col-span-2 grid grid-cols-2 gap-4 lg:border-l lg:border-[#D8CEBE] lg:pl-10">
-            {[
-              { value: '8–12%', label: 'Average rental yield' },
-              { value: '0%', label: 'Property & income tax' },
-              { value: 'AED 5M+', label: 'Golden Visa eligibility' },
-              { value: '100%', label: 'Foreign ownership' },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p className={`${fraunces.className} text-3xl text-[#4A151B] mb-1`}>{stat.value}</p>
-                <p className="text-[#8C6D53] text-xs leading-snug">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="relative z-10 w-full bg-[#EBE4DA]/95 border border-[#D8CEBE] p-4 md:p-5 rounded-2xl shadow-xl backdrop-blur-xl flex flex-col md:flex-row gap-3 items-center mt-14">
-          <div className="flex items-center gap-3 w-full bg-[#F2EDE4] px-4 py-3 rounded-xl border border-[#D8CEBE]">
-            <Building2 className="text-[#4A151B] w-5 h-5 shrink-0" />
-            <select
-              value={searchCategory}
-              onChange={(e) => setSearchCategory(e.target.value)}
-              className="bg-transparent w-full text-[#2C181A] outline-none cursor-pointer text-sm"
-            >
-              <option className="bg-[#F2EDE4]">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.name} className="bg-[#F2EDE4]">
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-3 w-full bg-[#F2EDE4] px-4 py-3 rounded-xl border border-[#D8CEBE]">
-            <MapPin className="text-[#4A151B] w-5 h-5 shrink-0" />
-            <input
-              type="text"
-              value={searchLocation}
-              onChange={(e) => setSearchLocation(e.target.value)}
-              placeholder="Ex: Downtown, Palm Jumeirah..."
-              className="bg-transparent w-full text-[#2C181A] outline-none placeholder:text-[#A8989A] text-sm"
+      {/* HERO WITH DYNAMIC IMAGE CAROUSEL BACKGROUND */}
+      <section className="relative h-[85vh] max-w-7xl mx-auto overflow-hidden rounded-3xl my-6 shadow-2xl group">
+        <div className="absolute inset-0 z-0">
+          {[
+            'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1600&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1600&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1600607687940-467f549687e1?q=80&w=1600&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1582407947304-788b6197f39c?q=80&w=1600&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1600566753086-00f18fb6772e?q=80&w=1600&auto=format&fit=crop',
+          ].map((img, i) => (
+            <div
+              key={i}
+              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out animate-carousel"
+              style={{
+                backgroundImage: `url('${img}')`,
+                animationDelay: `${i * 5}s`,
+                animationDuration: '25s'
+              }}
             />
+          ))}
+        </div>
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] z-10" />
+
+        <div className="relative z-20 h-full flex flex-col justify-center px-6 md:px-12">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-center w-full">
+            <div className="lg:col-span-3">
+              <Reveal>
+                <span className="inline-block text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-6 border-l-2 border-[#C5A880] pl-3 text-white">
+                  Luxury &amp; Investment Real Estate, Dubai
+                </span>
+                <h1 className={`${fraunces.className} text-5xl md:text-6xl lg:text-7xl font-medium tracking-tight mb-6 leading-[1.05] text-white`}>
+                  Find your exceptional property in{' '}
+                  <em className="italic text-[#C5A880] not-italic">the heart of Dubai</em>
+                </h1>
+                <p className="text-gray-200 text-lg max-w-xl font-light leading-relaxed mb-10">
+                  An exclusive selection of apartments, villas and townhouses, matched with the legal and financial guidance
+                  international buyers need to invest with confidence.
+                </p>
+              </Reveal>
+            </div>
+
+            {/* KEY METRICS / STATS */}
+            <div className="lg:col-span-2 grid grid-cols-2 gap-6">
+              {[
+                { value: '8–12%', label: 'Average rental yield' },
+                { value: '0%', label: 'Property & income tax' },
+                { value: 'AED 5M+', label: 'Golden Visa eligibility' },
+                { value: '100%', label: 'Foreign ownership' },
+              ].map((stat, i) => (
+                <Reveal key={stat.label} delay={i * 100}>
+                  <div className="p-6 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-center">
+                    <p className={`${fraunces.className} text-3xl text-white mb-1`}>{stat.value}</p>
+                    <p className="text-gray-300 text-xs leading-snug">{stat.label}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
           </div>
 
-          <Link
-            href={searchHref}
-            className="w-full md:w-auto bg-[#4A151B] text-[#F2EDE4] font-bold px-8 py-3.5 rounded-xl hover:bg-[#3B1115] transition flex items-center justify-center gap-2 shrink-0 shadow-md"
-          >
-            <Search className="w-5 h-5" />
-            Search
-          </Link>
+          {/* SEARCH BAR POSITIONED JUST BELOW STATS / HERO */}
+          <div className="relative z-30 w-full max-w-5xl mx-auto bg-white border border-[#D8CEBE] p-4 md:p-6 rounded-3xl shadow-2xl flex flex-col md:flex-row gap-4 items-center mt-16">
+            <div className="w-full md:w-auto flex-1 px-4 py-2 border-r border-[#D8CEBE] hidden md:block">
+              <p className="text-[#2C181A] font-semibold text-sm">Find the home you want, or the investment that gets you there, with Oravya.</p>
+            </div>
+
+            <div className="flex items-center gap-3 w-full md:w-auto bg-[#F2EDE4] px-4 py-3 rounded-xl border border-[#D8CEBE]">
+              <Building2 className="text-[#4A151B] w-5 h-5 shrink-0" />
+              <select
+                value={searchCategory}
+                onChange={(e) => setSearchCategory(e.target.value)}
+                className="bg-transparent w-full text-[#2C181A] outline-none cursor-pointer text-sm font-medium"
+              >
+                <option className="bg-[#F2EDE4]">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name} className="bg-[#F2EDE4]">
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-3 w-full md:w-auto bg-[#F2EDE4] px-4 py-3 rounded-xl border border-[#D8CEBE]">
+              <MapPin className="text-[#4A151B] w-5 h-5 shrink-0" />
+              <input
+                type="text"
+                value={searchLocation}
+                onChange={(e) => setSearchLocation(e.target.value)}
+                placeholder="Search by community or building"
+                className="bg-transparent w-full text-[#2C181A] outline-none placeholder:text-[#A8989A] text-sm font-medium"
+              />
+            </div>
+
+            <Link
+              href={searchHref}
+              className="w-full md:w-auto bg-[#4A151B] text-[#F2EDE4] font-bold px-10 py-4 rounded-xl hover:bg-[#3B1115] transition flex items-center justify-center gap-2 shrink-0 shadow-md"
+            >
+              <Search className="w-5 h-5" />
+              Search
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* QUICK ACTIONS / CTAs — from MySQL */}
+      {/* TRUST BAR */}
+      <section className="px-6 py-12 max-w-7xl mx-auto border-y border-[#D8CEBE] my-12">
+        <Reveal>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            {[
+              { value: '15,000+', label: 'Google Reviews' },
+              { value: '10+', label: 'Years Experience' },
+              { value: '500+', label: 'Expert Agents' },
+              { value: 'AED 1B+', label: 'Assets Managed' },
+            ].map((stat, i) => (
+              <Reveal key={stat.label} delay={i * 100}>
+                <div className="flex flex-col items-center">
+                  <p className={`${fraunces.className} text-3xl font-medium text-[#4A151B]`}>{stat.value}</p>
+                  <p className="text-[#8C6D53] text-xs uppercase tracking-widest font-semibold">{stat.label}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </Reveal>
+      </section>
+
+      {/* DEVELOPER PARTNERSHIPS (DYNAMIC FROM ADMIN DATABASE READY) */}
+      <section className="px-6 py-16 max-w-7xl mx-auto text-center">
+        <Reveal>
+          <span className="text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-3 block">Developers</span>
+          <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium mb-4 text-[#2C181A]`}>
+            Trusted partner of Dubai's biggest developers
+          </h2>
+          <p className="text-[#685248] max-w-2xl mx-auto text-sm md:text-base font-light mb-12">
+            We sell direct from master developers, ensuring launch prices and payment plans reach you first. Managed dynamically via admin portal.
+          </p>
+        </Reveal>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 items-center">
+          {['Emaar', 'Binghatti', 'Dubai Properties', 'Damac', 'Meraas'].map((dev, i) => (
+            <Reveal key={dev} delay={i * 100}>
+              <div className="flex items-center justify-center p-6 bg-white border border-[#D8CEBE] rounded-2xl font-bold text-[#4A151B] text-base shadow-sm hover:border-[#4A151B] transition duration-300 group">
+                <span className="group-hover:scale-105 transition duration-300">{dev}</span>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* QUICK ACTIONS / CTAs */}
       <section className="px-6 py-10 max-w-7xl mx-auto">
         <Reveal>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -279,7 +350,7 @@ export default function HomePage() {
         </Reveal>
       </section>
 
-      {/* PROPERTY TYPES — from MySQL */}
+      {/* PROPERTY TYPES */}
       <SectionBackdrop variant="soft" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE]">
         <Reveal>
           <div className="flex justify-between items-end mb-12">
@@ -356,7 +427,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FEATURED */}
+      {/* FEATURED PROPERTIES */}
       <SectionBackdrop variant="villa" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE]">
         <Reveal>
           <div className="max-w-2xl mb-16">
@@ -455,7 +526,7 @@ export default function HomePage() {
         </div>
       </SectionBackdrop>
 
-      {/* WHY */}
+      {/* WHY ORAVYA */}
       <section className="px-6 py-20 max-w-7xl mx-auto">
         <Reveal>
           <div className="max-w-2xl mb-16">
@@ -482,8 +553,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FAQ */}
-      <SectionBackdrop variant="night" className="px-6 py-20 max-w-5xl mx-auto border-t border-[#D8CEBE] scroll-mt-24" >
+      {/* FAQ SECTION */}
+      <SectionBackdrop variant="night" className="px-6 py-20 max-w-5xl mx-auto border-t border-[#D8CEBE] scroll-mt-24">
         <div id="faqs">
           <Reveal>
             <div className="text-center max-w-2xl mx-auto mb-16">

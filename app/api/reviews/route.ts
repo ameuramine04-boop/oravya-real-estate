@@ -5,10 +5,23 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const all = searchParams.get('all') === '1';
+
+    // Si on demande tous les avis (y compris en attente), on restreint aux admins
+    if (all) {
+      const authHeader = request.headers.get('x-user-role');
+      if (!authHeader || authHeader !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
+          { status: 403 }
+        );
+      }
+    }
+
     const reviews = await prisma.review.findMany({
       where: all ? undefined : { status: 'Approved' },
       orderBy: { createdAt: 'desc' },
     });
+
     return NextResponse.json(reviews, { status: 200 });
   } catch (error) {
     console.error('Erreur GET reviews:', error);
@@ -34,7 +47,7 @@ export async function POST(request: Request) {
         investment: investment?.trim() || '',
         quote: quote.trim(),
         rating: stars,
-        status: 'Pending',
+        status: 'Pending', // En attente de validation par l'admin
       },
     });
 

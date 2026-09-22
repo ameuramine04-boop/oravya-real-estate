@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+@keyframes carousel {
+  0%, 20% { opacity: 1; transform: scale(1); }
+  25%, 95% { opacity: 0; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-carousel {
+  animation: carousel 25s infinite ease-in-out;
+}

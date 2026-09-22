@@ -51,13 +51,28 @@ async function ensureDefaultServices() {
   }
 }
 
-// GET : Récupérer tous les services depuis MySQL
-export async function GET() {
+// GET : Récupérer tous les services depuis MySQL (Public pour les actifs, Admin pour tous)
+export async function GET(request: Request) {
   try {
     await ensureDefaultServices();
+    const { searchParams } = new URL(request.url);
+    const all = searchParams.get('all') === '1';
+
+    if (all) {
+      const authHeader = request.headers.get('x-user-role');
+      if (!authHeader || authHeader !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
+          { status: 403 }
+        );
+      }
+    }
+
     const services = await prisma.service.findMany({
+      where: all ? undefined : { active: true },
       orderBy: { sortOrder: 'asc' },
     });
+
     return NextResponse.json(services, { status: 200 });
   } catch (error) {
     console.error('Erreur GET services:', error);
@@ -65,9 +80,18 @@ export async function GET() {
   }
 }
 
-// POST : Ajouter un nouveau service depuis l'administration
+// POST : Ajouter un nouveau service depuis l'administration (Réservé aux administrateurs)
 export async function POST(request: Request) {
   try {
+    // Vérification de sécurité : Seul un administrateur peut créer un service
+    const authHeader = request.headers.get('x-user-role');
+    if (!authHeader || authHeader !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { title, tagline, description, icon, sortOrder, active } = body;
 
@@ -77,9 +101,9 @@ export async function POST(request: Request) {
 
     const newService = await prisma.service.create({
       data: {
-        title,
-        tagline,
-        description: description || '',
+        title: title.trim(),
+        tagline: tagline.trim(),
+        description: description ? description.trim() : '',
         icon: icon || 'Building2',
         sortOrder: parseInt(sortOrder) || 0,
         active: active !== undefined ? Boolean(active) : true,

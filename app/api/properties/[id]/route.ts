@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// GET : Récupérer une propriété par id
+// GET : Récupérer une propriété par id (Ouvert au public)
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -21,12 +21,21 @@ export async function GET(
   }
 }
 
-// PUT : Modifier une propriété existante
+// PUT : Modifier une propriété existante (Réservé aux administrateurs)
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Vérification de sécurité : Seul un administrateur peut modifier une propriété
+    const authHeader = request.headers.get('x-user-role');
+    if (!authHeader || authHeader !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { name, location, type, price, beds, baths, size, status, description, amenities, images } = body;
@@ -34,17 +43,17 @@ export async function PUT(
     const updatedProperty = await prisma.property.update({
       where: { id },
       data: {
-        name,
-        location,
-        type,
-        price: parseFloat(price),
-        beds: parseInt(beds) || 0,
-        baths: parseInt(baths) || 0,
-        size: parseFloat(size) || 0,
-        status: status || 'Ready',
-        description: description || '',
-        amenities: amenities ? JSON.stringify(amenities) : JSON.stringify([]),
-        images: images ? JSON.stringify(images) : JSON.stringify([]),
+        ...(name !== undefined && { name: name.trim() }),
+        ...(location !== undefined && { location: location.trim() }),
+        ...(type !== undefined && { type: type.trim() }),
+        ...(price !== undefined && { price: parseFloat(price) || 0 }),
+        ...(beds !== undefined && { beds: parseInt(beds) || 0 }),
+        ...(baths !== undefined && { baths: parseInt(baths) || 0 }),
+        ...(size !== undefined && { size: parseFloat(size) || 0 }),
+        ...(status !== undefined && { status: status.trim() }),
+        ...(description !== undefined && { description: description.trim() }),
+        ...(amenities !== undefined && { amenities: JSON.stringify(amenities) }),
+        ...(images !== undefined && { images: JSON.stringify(images) }),
       },
     });
 
@@ -55,12 +64,21 @@ export async function PUT(
   }
 }
 
-// DELETE : Supprimer une propriété de MySQL
+// DELETE : Supprimer une propriété de MySQL (Réservé aux administrateurs)
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Vérification de sécurité : Seul un administrateur peut supprimer une propriété
+    const authHeader = request.headers.get('x-user-role');
+    if (!authHeader || authHeader !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
 
     await prisma.property.delete({

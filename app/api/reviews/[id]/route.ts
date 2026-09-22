@@ -6,6 +6,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Vérification de sécurité : Seul un administrateur peut modifier ou modérer un avis
+    const authHeader = request.headers.get('x-user-role');
+    if (!authHeader || authHeader !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { status, authorName, location, investment, quote, rating } = body;
@@ -13,12 +22,12 @@ export async function PUT(
     const review = await prisma.review.update({
       where: { id },
       data: {
-        ...(status !== undefined && { status }),
-        ...(authorName !== undefined && { authorName }),
-        ...(location !== undefined && { location }),
-        ...(investment !== undefined && { investment }),
-        ...(quote !== undefined && { quote }),
-        ...(rating !== undefined && { rating: parseInt(rating) || 5 }),
+        ...(status !== undefined && { status: status.trim() }),
+        ...(authorName !== undefined && { authorName: authorName.trim() }),
+        ...(location !== undefined && { location: location.trim() }),
+        ...(investment !== undefined && { investment: investment.trim() }),
+        ...(quote !== undefined && { quote: quote.trim() }),
+        ...(rating !== undefined && { rating: Math.min(5, Math.max(1, parseInt(rating) || 5)) }),
       },
     });
 
@@ -30,12 +39,22 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Vérification de sécurité : Seul un administrateur peut supprimer un avis
+    const authHeader = request.headers.get('x-user-role');
+    if (!authHeader || authHeader !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     await prisma.review.delete({ where: { id } });
+    
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error('Erreur DELETE review:', error);
