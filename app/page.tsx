@@ -648,8 +648,8 @@ export default function HomePage() {
               };
 
               const details = categoryDetails[item.name] || {
-                image: item.image || 'https://images.pexels.com/photos/162031/dubai-luxury-architecture-skyscraper-162031.jpeg?auto=compress&cs=tinysrgb&w=800',
-                desc: item.description || 'Explore exceptional properties tailored to your refined lifestyle.'
+                image: (item as any).image || 'https://images.pexels.com/photos/162031/dubai-luxury-architecture-skyscraper-162031.jpeg?auto=compress&cs=tinysrgb&w=800',
+                desc: (item as any).description || 'Explore exceptional properties tailored to your refined lifestyle.'
               };
               
               return (
