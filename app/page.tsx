@@ -230,7 +230,7 @@ export default function HomePage() {
       <Navbar />
 
       {/* ================= HERO SECTION (FULL SCREEN IMMERSIVE SLIDER) ================= */}
-      <section className="relative w-full h-[90vh] overflow-hidden bg-[#4A1F23]">
+     <section className="relative w-full h-screen min-h-[700px] overflow-hidden bg-[#4A1F23]">
         {HERO_SLIDES.map((slide, index) => {
           const isActive = index === currentSlide;
           return (
@@ -247,7 +247,7 @@ export default function HomePage() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#4A1F23]/90 via-[#6B2B2E]/40 to-black/30" />
 
-              <div className="relative z-30 h-full flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+              <div className="relative z-30 h-full flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto pt-32 sm:pt-36">
                 <span className="px-4 py-1.5 rounded-full bg-[#E7B6A5]/20 backdrop-blur-md text-[#F5E1C7] text-xs sm:text-sm font-medium tracking-widest uppercase mb-6 border border-[#E7B6A5]/30 shadow-lg">
                   {slide.tag}
                 </span>
