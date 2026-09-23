@@ -7,6 +7,8 @@ import { Fraunces } from 'next/font/google';
 import {
   Search,
   Building2,
+  MessageSquarePlus, 
+  X,
   Home,
   MapPin,
   Calendar,
@@ -100,6 +102,7 @@ export default function HomePage() {
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [searchCategory, setSearchCategory] = useState('All Categories');
   const [searchLocation, setSearchLocation] = useState('');
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const [reviewForm, setReviewForm] = useState({
     authorName: '',
@@ -123,7 +126,7 @@ export default function HomePage() {
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
 
-  useEffect(() => {
+ useEffect(() => {
     async function loadHomeData() {
       try {
         const [servicesRes, propsRes, ctasRes, catsRes, reviewsRes] = await Promise.all([
@@ -134,23 +137,39 @@ export default function HomePage() {
           fetch('/api/reviews'),
         ]);
 
-        const servicesData = await servicesRes.json();
+        // Helper pour parser le JSON en toute sécurité si la réponse est bien du JSON
+        const safeJson = async (res: Response) => {
+          const contentType = res.headers.get('content-type');
+          if (res.ok && contentType && contentType.includes('application/json')) {
+            return await res.json();
+          }
+          return null;
+        };
+
+        const [servicesData, ctasData, catsData, reviewsData, propsData] = await Promise.all([
+          safeJson(servicesRes),
+          safeJson(ctasRes),
+          safeJson(catsRes),
+          safeJson(reviewsRes),
+          safeJson(propsRes),
+        ]);
+
         if (Array.isArray(servicesData)) {
           setServices(servicesData.filter((s: ServiceItem) => s.active !== false));
         }
 
-        const ctasData = await ctasRes.json();
-        if (Array.isArray(ctasData)) setCtas(ctasData);
+        if (Array.isArray(ctasData)) {
+          setCtas(ctasData);
+        }
 
-        const catsData = await catsRes.json();
         if (Array.isArray(catsData)) {
           setCategories(catsData.filter((c: PropertyCategoryItem) => c.name !== 'Holiday Home'));
         }
 
-        const reviewsData = await reviewsRes.json();
-        if (Array.isArray(reviewsData)) setReviews(reviewsData);
+        if (Array.isArray(reviewsData)) {
+          setReviews(reviewsData);
+        }
 
-        const propsData = await propsRes.json();
         if (Array.isArray(propsData)) {
           const saleProps = propsData
             .filter((p: any) => p.type !== 'Holiday Home')
@@ -353,73 +372,132 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= LATEST OFF-PLAN & NEW LAUNCHES (PLACED AFTER PARTNERS) ================= */}
-      <section className="px-6 py-20 max-w-7xl mx-auto">
-        <Reveal>
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
-            <div>
-              <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Off Plan</span>
-              <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#4A1F23]`}>
-                The latest launches in Dubai
-              </h2>
-              <p className="text-[#6B2B2E]/80 font-light mt-2">
-                Newly released projects from the developers building the city, with the payment plan and handover quarter stated up front.
-              </p>
-            </div>
-            <Link href="/properties?type=Off-Plan" className="inline-flex items-center gap-2 text-sm font-semibold text-[#8E3A47] hover:underline shrink-0">
-              View all projects <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </Reveal>
+{/* ================= LATEST OFF-PLAN & NEW LAUNCHES (GRID OR CAROUSEL IF > 4) ================= */}
+      <section className="relative w-full py-24 my-12 overflow-hidden border-y border-[#E7B6A5]/30 text-[#F5E1C7]">
+        {/* Image de fond professionnelle et moderne (Dubaï skyline) */}
+        <div 
+          className="absolute inset-0 w-full h-full bg-cover bg-center"
+          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1920&auto=format&fit=crop')` }}
+        />
 
-        {featured.length === 0 ? (
-          <div className="bg-white/70 border border-[#E7B6A5]/50 rounded-2xl p-10 text-center">
-            <p className="text-[#6B2B2E]/80 text-sm">No off-plan projects currently listed.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {featured.slice(0, 3).map((property, i) => (
-              <Reveal key={property.id} delay={i * 90}>
-                <div className="bg-white border border-[#E7B6A5]/50 rounded-2xl overflow-hidden hover:border-[#8E3A47] transition duration-300 group shadow-sm h-full flex flex-col justify-between hover:shadow-lg">
-                  <div>
-                    <div className="h-64 relative bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url('${property.images[0]}')` }}>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent group-hover:scale-105 transition duration-500" />
-                      <span className="absolute top-4 left-4 bg-[#8E3A47] text-[#F5E1C7] text-xs font-bold px-3 py-1 rounded-full z-10 shadow-md">
-                        {property.status || 'New Launch'}
-                      </span>
-                      {property.handover && (
-                        <span className="absolute bottom-4 left-4 text-white text-xs font-medium bg-black/40 backdrop-blur-md px-3 py-1 rounded-lg">
-                          Handover: {property.handover}
+        {/* Voile bordeaux semi-transparent pour harmoniser avec le thème de la marque */}
+        <div className="absolute inset-0 bg-[#4A1F23]/88 backdrop-blur-[2px]" />
+
+        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
+          <Reveal>
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
+              <div>
+                <span className="text-xs uppercase tracking-widest text-[#E7B6A5] font-semibold mb-3 block">Off Plan</span>
+                <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#F5E1C7]`}>
+                  The latest launches in Dubai
+                </h2>
+                <p className="text-[#F5E1C7]/80 font-light mt-2">
+                  Newly released projects from the developers building the city, with the payment plan and handover quarter stated up front.
+                </p>
+              </div>
+              <Link href="/properties?type=Off-Plan" className="inline-flex items-center gap-2 text-sm font-semibold text-[#E7B6A5] hover:underline shrink-0">
+                View all projects <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </Reveal>
+
+          {featured.length === 0 ? (
+            <div className="bg-[#6B2B2E]/70 border border-[#E7B6A5]/50 rounded-2xl p-10 text-center backdrop-blur-md">
+              <p className="text-[#F5E1C7]/80 text-sm">No off-plan projects currently listed.</p>
+            </div>
+          ) : featured.length > 4 ? (
+            /* Si plus de 4 éléments : Défilement horizontal automatique (Marquee) */
+            <div className="relative w-full overflow-hidden py-4">
+              <div className="flex gap-6 animate-marquee whitespace-nowrap">
+                {[...featured, ...featured].map((property, i) => (
+                  <div
+                    key={`${property.id}-${i}`}
+                    className="w-[350px] sm:w-[380px] shrink-0 bg-white border border-[#E7B6A5]/50 rounded-2xl overflow-hidden hover:border-[#8E3A47] transition duration-300 group shadow-sm flex flex-col justify-between whitespace-normal"
+                  >
+                    <div>
+                      <div className="h-64 relative bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url('${property.images[0]}')` }}>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent group-hover:scale-105 transition duration-500" />
+                        <span className="absolute top-4 left-4 bg-[#8E3A47] text-[#F5E1C7] text-xs font-bold px-3 py-1 rounded-full z-10 shadow-md">
+                          {property.status || 'New Launch'}
                         </span>
-                      )}
-                    </div>
-                    <div className="p-6">
-                      <span className="text-xs text-[#8E3A47] uppercase tracking-wider font-semibold">{property.type}</span>
-                      <h3 className="text-lg font-bold mt-1 mb-2 text-[#4A1F23] group-hover:text-[#8E3A47] transition">{property.name}</h3>
-                      <p className="text-[#6B2B2E]/80 text-sm flex items-center gap-1 mb-4">
-                        <MapPin className="w-4 h-4 text-[#8E3A47]" /> {property.location}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="p-6 pt-0">
-                    <div className="flex justify-between items-center pt-4 border-t border-[#E7B6A5]/40">
-                      <div>
-                        <span className="text-[10px] uppercase text-[#8E3A47] block font-semibold">Starting from</span>
-                        <span className="font-bold text-[#4A1F23]">{formatPrice(property.price)}</span>
+                        {property.handover && (
+                          <span className="absolute bottom-4 left-4 text-white text-xs font-medium bg-black/40 backdrop-blur-md px-3 py-1 rounded-lg">
+                            Handover: {property.handover}
+                          </span>
+                        )}
                       </div>
-                      <Link
-                        href={`/properties/${property.id}`}
-                        className="text-xs bg-[#F5E1C7]/30 hover:bg-[#8E3A47] hover:text-[#F5E1C7] border border-[#E7B6A5] text-[#4A1F23] px-4 py-2.5 rounded-xl transition font-medium"
-                      >
-                        Explore
-                      </Link>
+                      <div className="p-6">
+                        <span className="text-xs text-[#8E3A47] uppercase tracking-wider font-semibold">{property.type}</span>
+                        <h3 className="text-lg font-bold mt-1 mb-2 text-[#4A1F23] group-hover:text-[#8E3A47] transition">{property.name}</h3>
+                        <p className="text-[#6B2B2E]/80 text-sm flex items-center gap-1 mb-4">
+                          <MapPin className="w-4 h-4 text-[#8E3A47]" /> {property.location}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-6 pt-0">
+                      <div className="flex justify-between items-center pt-4 border-t border-[#E7B6A5]/40">
+                        <div>
+                          <span className="text-[10px] uppercase text-[#8E3A47] block font-semibold">Starting from</span>
+                          <span className="font-bold text-[#4A1F23]">{formatPrice(property.price)}</span>
+                        </div>
+                        <Link
+                          href={`/properties/${property.id}`}
+                          className="text-xs bg-[#F5E1C7]/30 hover:bg-[#8E3A47] hover:text-[#F5E1C7] border border-[#E7B6A5] text-[#4A1F23] px-4 py-2.5 rounded-xl transition font-medium"
+                        >
+                          Explore
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        )}
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* Si 4 éléments ou moins : Grille fixe classique */
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
+              {featured.map((property, i) => (
+                <Reveal key={property.id} delay={i * 90}>
+                  <div className="bg-white border border-[#E7B6A5]/50 rounded-2xl overflow-hidden hover:border-[#8E3A47] transition duration-300 group shadow-sm h-full flex flex-col justify-between hover:shadow-lg">
+                    <div>
+                      <div className="h-64 relative bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url('${property.images[0]}')` }}>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent group-hover:scale-105 transition duration-500" />
+                        <span className="absolute top-4 left-4 bg-[#8E3A47] text-[#F5E1C7] text-xs font-bold px-3 py-1 rounded-full z-10 shadow-md">
+                          {property.status || 'New Launch'}
+                        </span>
+                        {property.handover && (
+                          <span className="absolute bottom-4 left-4 text-white text-xs font-medium bg-black/40 backdrop-blur-md px-3 py-1 rounded-lg">
+                            Handover: {property.handover}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-6">
+                        <span className="text-xs text-[#8E3A47] uppercase tracking-wider font-semibold">{property.type}</span>
+                        <h3 className="text-lg font-bold mt-1 mb-2 text-[#4A1F23] group-hover:text-[#8E3A47] transition">{property.name}</h3>
+                        <p className="text-[#6B2B2E]/80 text-sm flex items-center gap-1 mb-4">
+                          <MapPin className="w-4 h-4 text-[#8E3A47]" /> {property.location}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-6 pt-0">
+                      <div className="flex justify-between items-center pt-4 border-t border-[#E7B6A5]/40">
+                        <div>
+                          <span className="text-[10px] uppercase text-[#8E3A47] block font-semibold">Starting from</span>
+                          <span className="font-bold text-[#4A1F23]">{formatPrice(property.price)}</span>
+                        </div>
+                        <Link
+                          href={`/properties/${property.id}`}
+                          className="text-xs bg-[#F5E1C7]/30 hover:bg-[#8E3A47] hover:text-[#F5E1C7] border border-[#E7B6A5] text-[#4A1F23] px-4 py-2.5 rounded-xl transition font-medium"
+                        >
+                          Explore
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* ================= MOST TRENDING PROJECTS (VILLAS, LUXURY, FLATS) ================= */}
@@ -508,44 +586,101 @@ export default function HomePage() {
         </Reveal>
       </section>
 
-      {/* PROPERTY TYPES */}
-      <SectionBackdrop variant="soft" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#E7B6A5]/40 my-12 rounded-3xl bg-white/30">
-        <Reveal>
-          <div className="flex justify-between items-end mb-12">
-            <div>
-              <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Property Types</span>
-              <h2 className={`${fraunces.className} text-2xl md:text-4xl font-medium tracking-tight text-[#4A1F23]`}>
-                Explore by category
-              </h2>
+ {/* ================= PROPERTY TYPES (WITH UNIQUE MATCHING IMAGES & ENGLISH DESCRIPTIONS) ================= */}
+      <section className="w-full py-24 bg-[#4A1F23] text-[#F5E1C7] border-y border-[#E7B6A5]/30 my-12">
+        <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
+          <Reveal>
+            <div className="flex justify-between items-end mb-16">
+              <div>
+                <span className="text-xs uppercase tracking-widest text-[#E7B6A5] font-semibold mb-3 block">Property Types</span>
+                <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#F5E1C7]`}>
+                  Explore by category
+                </h2>
+              </div>
+              <Link href="/properties" className="hidden sm:flex items-center gap-2 text-sm text-[#E7B6A5] hover:underline font-medium transition">
+                View all properties <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
-            <Link href="/properties" className="hidden sm:flex items-center gap-2 text-sm text-[#8E3A47] hover:underline font-medium transition">
-              View all properties <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </Reveal>
+          </Reveal>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {categories.slice(0, 8).map((item, i) => {
-            const Icon = ICON_MAP[item.icon] || Building2;
-            return (
-              <Reveal key={item.id} delay={i * 50}>
-                <Link
-                  href={`/properties?type=${encodeURIComponent(item.name)}`}
-                  className="group relative bg-white/80 border border-[#E7B6A5]/50 p-7 rounded-2xl hover:border-[#8E3A47] transition duration-300 overflow-hidden shadow-sm h-full backdrop-blur-md block"
-                >
-                  <div className="absolute top-0 right-0 w-28 h-28 bg-[#E7B6A5]/20 rounded-full blur-2xl group-hover:bg-[#E7B6A5]/40 transition" />
-                  <Icon className="w-7 h-7 text-[#8E3A47] mb-5 group-hover:scale-110 transition duration-300" />
-                  <h4 className="text-lg font-bold mb-2 text-[#4A1F23]">{item.name}</h4>
-                  <p className="text-[#6B2B2E]/80 text-xs mb-4 font-light leading-relaxed line-clamp-3">{item.description}</p>
-                  <span className="text-xs text-[#8E3A47] uppercase tracking-wider font-semibold inline-flex items-center gap-1">
-                    Explore <ArrowRight className="w-3 h-3" />
-                  </span>
-                </Link>
-              </Reveal>
-            );
-          })}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {categories.slice(0, 8).map((item, i) => {
+              const Icon = ICON_MAP[item.icon] || Building2;
+              
+              // Dictionnaire associant chaque catégorie à son image spécifique et sa description en anglais
+              const categoryDetails: Record<string, { image: string; desc: string }> = {
+                'Villa': {
+                  image: 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg?auto=compress&cs=tinysrgb&w=800',
+                  desc: 'Spacious family homes featuring private gardens and premium amenities.'
+                },
+                'Apartment': {
+                  image: 'https://images.pexels.com/photos/276724/pexels-photo-276724.jpeg?auto=compress&cs=tinysrgb&w=800',
+                  desc: 'Modern urban apartments situated in prime downtown locations.'
+                },
+                'Penthouse': {
+                  image: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800',
+                  desc: 'Ultra-exclusive top-floor residences offering panoramic skyline views.'
+                },
+                'Townhouse': {
+                  image: 'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=800',
+                  desc: 'Contemporary multi-level family residences in vibrant communities.'
+                },
+                'Duplex': {
+                  image: 'https://images.pexels.com/photos/2121121/pexels-photo-2121121.jpeg?auto=compress&cs=tinysrgb&w=800',
+                  desc: 'Stylish two-story residences combining space and architectural elegance.'
+                },
+                'Luxury': {
+                  image: 'https://images.pexels.com/photos/2044434/pexels-photo-2044434.jpeg?auto=compress&cs=tinysrgb&w=800',
+                  desc: 'Handcrafted prestige estates tailored for high-net-worth lifestyles.'
+                },
+                'Triplex': {
+                  image: 'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800',
+                  desc: 'Expansive luxury residence spread gracefully across three distinct levels.'
+                },
+                'Mansion': {
+                  image: 'https://images.pexels.com/photos/53610/large-home-residential-house-architecture-53610.jpeg?auto=compress&cs=tinysrgb&w=800',
+                  desc: 'Massive and ultra-luxurious property styled as a modern grand estate.'
+                },
+                'Serviced Apartment': {
+                  image: 'https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg?auto=compress&cs=tinysrgb&w=800',
+                  desc: 'Hotel-managed residences by elite brands featuring integrated concierge services.'
+                }
+              };
+
+              const details = categoryDetails[item.name] || {
+                image: item.image || 'https://images.pexels.com/photos/162031/dubai-luxury-architecture-skyscraper-162031.jpeg?auto=compress&cs=tinysrgb&w=800',
+                desc: item.description || 'Explore exceptional properties tailored to your refined lifestyle.'
+              };
+              
+              return (
+                <Reveal key={item.id} delay={i * 50}>
+                  <Link
+                    href={`/properties?type=${encodeURIComponent(item.name)}`}
+                    className="group relative h-72 rounded-2xl overflow-hidden shadow-lg flex flex-col justify-end p-6 border border-[#E7B6A5]/30 block transition duration-500 hover:border-[#E7B6A5] hover:shadow-xl"
+                  >
+                    <div
+                      className="absolute inset-0 bg-cover bg-center group-hover:scale-110 transition duration-700 ease-out"
+                      style={{ backgroundImage: `url('${details.image}')` }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#4A1F23]/95 via-[#4A1F23]/50 to-transparent group-hover:from-[#4A1F23] transition duration-500" />
+                    
+                    <div className="relative z-10">
+                      <div className="w-10 h-10 rounded-xl bg-[#F5E1C7]/20 backdrop-blur-md flex items-center justify-center text-[#F5E1C7] mb-3 border border-[#E7B6A5]/30">
+                        <Icon className="w-5 h-5 text-[#E7B6A5]" />
+                      </div>
+                      <h4 className="text-lg font-bold mb-1 text-[#F5E1C7]">{item.name}</h4>
+                      <p className="text-[#F5E1C7]/80 text-xs mb-3 font-light leading-relaxed line-clamp-2">{details.desc}</p>
+                      <span className="text-xs text-[#E7B6A5] uppercase tracking-wider font-semibold inline-flex items-center gap-1 group-hover:translate-x-1 transition duration-300">
+                        Explore <ArrowRight className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
+                  </Link>
+                </Reveal>
+              );
+            })}
+          </div>
         </div>
-      </SectionBackdrop>
+      </section>
 
       {/* OUR SERVICES */}
       <section id="services" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#E7B6A5]/40 scroll-mt-24">
@@ -656,152 +791,180 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FAQ SECTION */}
-      <SectionBackdrop variant="night" className="px-6 py-20 max-w-5xl mx-auto border-t border-[#E7B6A5]/40 scroll-mt-24 bg-white/30 rounded-3xl my-12">
-        <div id="faqs">
+{/* TESTIMONIALS + SUBMIT REVIEW MODAL (WITH LIGHT BACKGROUND IMAGE) */}
+      <section 
+        id="testimonials" 
+        className="relative py-20 border-t border-[#E7B6A5]/40 scroll-mt-24 overflow-hidden w-full text-[#4A1F23]"
+        style={{
+          backgroundImage: `url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1920&auto=format&fit=crop')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        {/* Voile clair semi-transparent (teinte crème #F5E1C7) pour un rendu lumineux et professionnel */}
+        <div className="absolute inset-0 bg-[#F5E1C7]/90 backdrop-blur-[2px]" />
+
+        <div className="relative z-10">
           <Reveal>
-            <div className="text-center max-w-2xl mx-auto mb-16">
-              <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Frequently Asked Questions</span>
+            <div className="text-center max-w-2xl mx-auto mb-16 px-6">
+              <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Client Testimonials</span>
               <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#4A1F23]`}>
-                Everything you need to know about investing in Dubai
+                Trusted by global investors &amp; homeowners
               </h2>
+              <p className="text-[#6B2B2E]/80 text-sm font-light mt-3">Share your experience with us, Your opinion matters</p>
+              
+              {/* Bouton ouvrant le modal d'ajout d'avis */}
+              <button
+                onClick={() => setIsReviewModalOpen(true)}
+                className="mt-6 inline-flex items-center gap-2 bg-[#8E3A47] hover:bg-[#6B2B2E] text-[#F5E1C7] px-6 py-3.5 rounded-xl transition shadow-lg text-xs uppercase tracking-wider font-bold cursor-pointer border border-[#E7B6A5]/40"
+              >
+                <MessageSquarePlus className="w-4 h-4" />
+                <span>Write a Review</span>
+              </button>
             </div>
           </Reveal>
-          <div className="space-y-4">
-            {[
-              { q: 'Can foreign nationals own 100% property in Dubai?', a: 'Yes. Foreigners and non-residents can have 100% freehold ownership in designated investment zones across Dubai.' },
-              { q: 'What are the property taxes and rental yields in Dubai?', a: 'Dubai offers 0% property tax, 0% capital gains tax, and 0% personal income tax. Rental yields average 8–12% net depending on location.' },
-              { q: 'How does property investment qualify for the UAE Golden Visa?', a: 'Investing a minimum of AED 2 million in real estate qualifies the investor and family for a 10-year UAE Golden Residency Visa.' },
-              { q: 'Can I buy a property remotely from abroad?', a: 'Absolutely. Oravya handles remote transactions from virtual viewings to title deed registration.' },
-            ].map((faq, i) => (
-              <Reveal key={faq.q} delay={i * 80}>
-                <div className="bg-white border border-[#E7B6A5]/50 p-6 md:p-8 rounded-2xl shadow-sm backdrop-blur-md">
-                  <h3 className="text-lg font-bold text-[#4A1F23] mb-2">{faq.q}</h3>
-                  <p className="text-[#6B2B2E]/80 text-sm font-light leading-relaxed">{faq.a}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </SectionBackdrop>
 
-      {/* TESTIMONIALS + SUBMIT REVIEW */}
-      <section id="testimonials" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#E7B6A5]/40 scroll-mt-24">
-        <Reveal>
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Client Testimonials</span>
-            <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#4A1F23]`}>
-              Trusted by global investors &amp; homeowners
-            </h2>
-            <p className="text-[#6B2B2E]/80 text-sm font-light mt-3">Only approved reviews appear here. Share yours below.</p>
-          </div>
-        </Reveal>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          {reviews.length === 0 ? (
-            <p className="text-sm text-[#8E3A47] col-span-3 text-center">No approved reviews yet.</p>
-          ) : (
-            reviews.slice(0, 6).map((review, i) => (
-              <Reveal key={review.id} delay={i * 90}>
-                <div className="bg-white border border-[#E7B6A5]/50 p-8 rounded-2xl shadow-sm flex flex-col justify-between h-full">
-                  <div>
-                    <div className="flex gap-1 mb-4 text-[#8E3A47]">
-                      {[...Array(review.rating || 5)].map((_, idx) => (
-                        <Star key={idx} className="w-4 h-4 fill-[#8E3A47]" />
-                      ))}
-                    </div>
-                    <p className="text-[#6B2B2E]/90 text-sm font-light leading-relaxed italic mb-6">&ldquo;{review.quote}&rdquo;</p>
-                  </div>
-                  <div className="pt-4 border-t border-[#E7B6A5]/40">
-                    <p className="font-bold text-[#4A1F23] text-sm">{review.authorName}</p>
-                    <p className="text-xs text-[#8E3A47]">
-                      {review.location}
-                      {review.investment ? (
-                        <>
-                          {' '}
-                          • <span className="font-medium text-[#4A1F23]">{review.investment}</span>
-                        </>
-                      ) : null}
-                    </p>
-                  </div>
-                </div>
-              </Reveal>
-            ))
-          )}
-        </div>
-
-        <Reveal>
-          <div className="max-w-2xl mx-auto bg-white border border-[#E7B6A5]/50 rounded-3xl p-8 shadow-sm">
-            <h3 className={`${fraunces.className} text-2xl text-[#4A1F23] mb-2`}>Share your experience</h3>
-            <p className="text-sm text-[#6B2B2E]/80 font-light mb-6">
-              Your review is submitted for admin approval before it appears on the website.
-            </p>
-            {reviewSent ? (
-              <div className="text-center py-8">
-                <CheckCircle2 className="w-12 h-12 text-[#8E3A47] mx-auto mb-4" />
-                <p className="font-semibold text-[#4A1F23] mb-2">Thank you — review received</p>
-                <p className="text-sm text-[#6B2B2E]/80">It will appear once approved by Oravya.</p>
-                <button onClick={() => setReviewSent(false)} className="mt-4 text-sm font-semibold text-[#8E3A47] hover:underline cursor-pointer">
-                  Submit another
-                </button>
-              </div>
+          {/* Défilement horizontal automatique et infini sur toute la largeur (Full Width) */}
+          <div className="relative w-full overflow-hidden py-4">
+            {reviews.length === 0 ? (
+              <p className="text-sm text-[#8E3A47] text-center px-6">No approved reviews yet.</p>
             ) : (
-              <form onSubmit={submitReview} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Your name"
-                    value={reviewForm.authorName}
-                    onChange={(e) => setReviewForm({ ...reviewForm, authorName: e.target.value })}
-                    className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] text-[#4A1F23]"
-                  />
-                  <input
-                    type="text"
-                    placeholder="City, Country"
-                    value={reviewForm.location}
-                    onChange={(e) => setReviewForm({ ...reviewForm, location: e.target.value })}
-                    className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] text-[#4A1F23]"
-                  />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Investment type (optional)"
-                  value={reviewForm.investment}
-                  onChange={(e) => setReviewForm({ ...reviewForm, investment: e.target.value })}
-                  className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] text-[#4A1F23]"
-                />
-                <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase tracking-wider text-[#8E3A47] font-medium">Rating</span>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setReviewForm({ ...reviewForm, rating: n })}
-                      className="p-1 cursor-pointer"
-                    >
-                      <Star className={`w-5 h-5 ${n <= reviewForm.rating ? 'fill-[#8E3A47] text-[#8E3A47]' : 'text-[#E7B6A5]'}`} />
-                    </button>
-                  ))}
-                </div>
-                <textarea
-                  rows={4}
-                  placeholder="Your review..."
-                  value={reviewForm.quote}
-                  onChange={(e) => setReviewForm({ ...reviewForm, quote: e.target.value })}
-                  className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] resize-none text-[#4A1F23]"
-                />
-                {reviewError && <p className="text-sm text-red-600">{reviewError}</p>}
-                <button
-                  type="submit"
-                  disabled={reviewSubmitting}
-                  className="w-full flex items-center justify-center gap-2 bg-[#8E3A47] text-[#F5E1C7] font-bold px-6 py-3.5 rounded-xl hover:bg-[#6B2B2E] transition shadow-md disabled:opacity-60 cursor-pointer"
-                >
-                  <Send className="w-4 h-4" /> {reviewSubmitting ? 'Sending...' : 'Submit for approval'}
-                </button>
-              </form>
+              <div className="flex gap-6 animate-marquee whitespace-nowrap px-3">
+                {[...reviews, ...reviews, ...reviews].map((review, i) => (
+                  <div
+                    key={`${review.id}-${i}`}
+                    className="w-[350px] sm:w-[420px] shrink-0 bg-white/95 border border-[#E7B6A5]/60 p-8 rounded-2xl shadow-md flex flex-col justify-between whitespace-normal backdrop-blur-sm"
+                  >
+                    <div>
+                      <div className="flex gap-1 mb-4 text-[#8E3A47]">
+                        {[...Array(review.rating || 5)].map((_, idx) => (
+                          <Star key={idx} className="w-4 h-4 fill-[#8E3A47]" />
+                        ))}
+                      </div>
+                      <p className="text-[#6B2B2E]/90 text-sm font-light leading-relaxed italic mb-6">&ldquo;{review.quote}&rdquo;</p>
+                    </div>
+                    <div className="pt-4 border-t border-[#E7B6A5]/40">
+                      <p className="font-bold text-[#4A1F23] text-sm">{review.authorName}</p>
+                      <p className="text-xs text-[#8E3A47]">
+                        {review.location}
+                        {review.investment ? (
+                          <>
+                            {' '}
+                            • <span className="font-medium text-[#4A1F23]">{review.investment}</span>
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-        </Reveal>
+        </div>
+
+        {/* Modal / Popup pour soumettre un avis */}
+        {isReviewModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="relative w-full max-w-lg bg-white border border-[#E7B6A5] rounded-3xl p-8 shadow-2xl text-[#4A1F23]">
+              
+              <button
+                onClick={() => { setIsReviewModalOpen(false); setReviewSent(false); }}
+                className="absolute top-6 right-6 p-2 rounded-full hover:bg-[#F5E1C7]/40 transition text-[#4A1F23] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <h3 className={`${fraunces.className} text-2xl text-[#4A1F23] mb-2`}>Share your experience</h3>
+              <p className="text-sm text-[#6B2B2E]/80 font-light mb-6">
+                Your review is submitted for admin approval before it appears on the website.
+              </p>
+
+              {reviewSent ? (
+                <div className="text-center py-8">
+                  <CheckCircle2 className="w-12 h-12 text-[#8E3A47] mx-auto mb-4" />
+                  <p className="font-semibold text-[#4A1F23] mb-2">Thank you — review received</p>
+                  <p className="text-sm text-[#6B2B2E]/80 mb-6">It will appear once approved by Oravya.</p>
+                  <button 
+                    onClick={() => { setIsReviewModalOpen(false); setReviewSent(false); }} 
+                    className="w-full bg-[#8E3A47] text-[#F5E1C7] font-bold py-3 rounded-xl hover:bg-[#6B2B2E] transition text-xs uppercase tracking-wider"
+                  >
+                    Close
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={submitReview} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      placeholder="Your name"
+                      value={reviewForm.authorName}
+                      onChange={(e) => setReviewForm({ ...reviewForm, authorName: e.target.value })}
+                      className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] text-[#4A1F23]"
+                    />
+                    <input
+                      type="text"
+                      placeholder="City, Country"
+                      value={reviewForm.location}
+                      onChange={(e) => setReviewForm({ ...reviewForm, location: e.target.value })}
+                      className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] text-[#4A1F23]"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Investment type (optional)"
+                    value={reviewForm.investment}
+                    onChange={(e) => setReviewForm({ ...reviewForm, investment: e.target.value })}
+                    className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] text-[#4A1F23]"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs uppercase tracking-wider text-[#8E3A47] font-medium">Rating</span>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setReviewForm({ ...reviewForm, rating: n })}
+                        className="p-1 cursor-pointer"
+                      >
+                        <Star className={`w-5 h-5 ${n <= reviewForm.rating ? 'fill-[#8E3A47] text-[#8E3A47]' : 'text-[#E7B6A5]'}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    rows={4}
+                    placeholder="Your review..."
+                    value={reviewForm.quote}
+                    onChange={(e) => setReviewForm({ ...reviewForm, quote: e.target.value })}
+                    className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] resize-none text-[#4A1F23]"
+                  />
+                  {reviewError && <p className="text-sm text-red-600">{reviewError}</p>}
+                  <button
+                    type="submit"
+                    disabled={reviewSubmitting}
+                    className="w-full flex items-center justify-center gap-2 bg-[#8E3A47] text-[#F5E1C7] font-bold px-6 py-3.5 rounded-xl hover:bg-[#6B2B2E] transition shadow-md disabled:opacity-60 cursor-pointer"
+                  >
+                    <Send className="w-4 h-4" /> {reviewSubmitting ? 'Sending...' : 'Submit for approval'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Style CSS pour l'animation fluide et l'effet de boucle continue full-width */}
+        <style jsx global>{`
+          @keyframes marquee {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-33.333%); }
+          }
+          .animate-marquee {
+            display: flex;
+            width: max-content;
+            animation: marquee 40s linear infinite;
+          }
+          .animate-marquee:hover {
+            animation-play-state: paused;
+          }
+        `}</style>
       </section>
 
       <footer className="px-6 py-12 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center text-sm text-[#8E3A47] border-t border-[#E7B6A5]/40">
