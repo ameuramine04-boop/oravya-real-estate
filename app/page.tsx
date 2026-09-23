@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import FloatingBrochureBtn from '@/components/FloatingBrochureBtn';
 import { Fraunces } from 'next/font/google';
 import {
   Search,
@@ -20,6 +21,8 @@ import {
   Tag,
   Star,
   Send,
+  ChevronLeft,
+  ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
 import Reveal from '@/components/Reveal';
@@ -52,6 +55,28 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Star,
 };
 
+// Photos de Dubaï garanties 100% stables et fonctionnelles (Pexels HD)
+const HERO_SLIDES = [
+  {
+    image: 'https://images.pexels.com/photos/442579/pexels-photo-442579.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    title: 'Redefining Luxury in Dubai',
+    subtitle: 'Discover exceptional residences in the heart of Downtown and Palm Jumeirah.',
+    tag: 'Exclusive Collection'
+  },
+  {
+    image: 'https://images.pexels.com/photos/3787839/pexels-photo-3787839.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    title: 'Waterfront Villas & Penthouses',
+    subtitle: 'A sumptuous lifestyle featuring breathtaking panoramic views of the lagoon.',
+    tag: 'Waterfront Living'
+  },
+  {
+    image: 'https://images.pexels.com/photos/2044434/pexels-photo-2044434.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    title: 'High-Yield Investments',
+    subtitle: 'Gain early access to the most sought-after off-plan projects before public launch.',
+    tag: 'Smart Investment'
+  }
+];
+
 function formatPrice(price: number) {
   return `AED ${price.toLocaleString('en-US')}`;
 }
@@ -67,6 +92,7 @@ function parseList(raw: any): string[] {
 }
 
 export default function HomePage() {
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [featured, setFeatured] = useState<any[]>([]);
   const [ctas, setCtas] = useState<HomeCtaItem[]>([]);
@@ -85,6 +111,17 @@ export default function HomePage() {
   const [reviewSent, setReviewSent] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
+  // Auto-play of the hero slider every 6 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
 
   useEffect(() => {
     async function loadHomeData() {
@@ -124,14 +161,14 @@ export default function HomePage() {
                 images:
                   images.length > 0
                     ? images
-                    : ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=800&auto=format&fit=crop'],
+                    : ['https://images.pexels.com/photos/162031/dubai-luxury-architecture-skyscraper-162031.jpeg?auto=compress&cs=tinysrgb&w=1200'],
               };
             });
           const featuredOnes = saleProps.filter((p: any) => p.featured);
           setFeatured((featuredOnes.length > 0 ? featuredOnes : saleProps).slice(0, 3));
         }
       } catch (err) {
-        console.error('Erreur chargement homepage:', err);
+        console.error('Error loading homepage data:', err);
       }
     }
     loadHomeData();
@@ -170,126 +207,123 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] font-sans selection:bg-[#4A151B] selection:text-[#F2EDE4] overflow-x-hidden">
+    <div className="min-h-screen bg-[#F5E1C7]/10 text-[#4A1F23] font-sans selection:bg-[#8E3A47] selection:text-[#F5E1C7] overflow-x-hidden">
       <Navbar />
 
-      {/* HERO WITH DYNAMIC IMAGE CAROUSEL BACKGROUND */}
-      <section className="relative h-[85vh] max-w-7xl mx-auto overflow-hidden rounded-3xl my-6 shadow-2xl group">
-        <div className="absolute inset-0 z-0">
-          {[
-            'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1600&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1600&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1600607687940-467f549687e1?q=80&w=1600&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1582407947304-788b6197f39c?q=80&w=1600&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1600566753086-00f18fb6772e?q=80&w=1600&auto=format&fit=crop',
-          ].map((img, i) => (
+      {/* ================= HERO SECTION (FULL SCREEN IMMERSIVE SLIDER) ================= */}
+      <section className="relative w-full h-[90vh] overflow-hidden bg-[#4A1F23]">
+        {HERO_SLIDES.map((slide, index) => {
+          const isActive = index === currentSlide;
+          return (
             <div
-              key={i}
-              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out animate-carousel"
-              style={{
-                backgroundImage: `url('${img}')`,
-                animationDelay: `${i * 5}s`,
-                animationDuration: '25s'
-              }}
+              key={index}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                isActive ? 'opacity-100 z-25 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
+              }`}
+            >
+              <img
+                src={slide.image}
+                alt={slide.title}
+                className="absolute inset-0 w-full h-full object-cover select-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#4A1F23]/90 via-[#6B2B2E]/40 to-black/30" />
+
+              <div className="relative z-30 h-full flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+                <span className="px-4 py-1.5 rounded-full bg-[#E7B6A5]/20 backdrop-blur-md text-[#F5E1C7] text-xs sm:text-sm font-medium tracking-widest uppercase mb-6 border border-[#E7B6A5]/30 shadow-lg">
+                  {slide.tag}
+                </span>
+                <h1 className={`${fraunces.className} text-4xl sm:text-6xl lg:text-7xl font-bold text-[#F5E1C7] tracking-tight leading-tight drop-shadow-xl mb-4`}>
+                  {slide.title}
+                </h1>
+                <p className="text-lg sm:text-xl text-[#F5E1C7]/90 max-w-2xl font-light drop-shadow-md mb-10">
+                  {slide.subtitle}
+                </p>
+
+                {/* Quick Search Bar */}
+                <div className="w-full max-w-4xl bg-white/95 backdrop-blur-md p-3 sm:p-4 rounded-2xl shadow-2xl flex flex-col md:flex-row items-center gap-3 border border-[#E7B6A5]/40">
+                  <div className="flex items-center gap-2 w-full px-3 py-2.5 bg-[#F5E1C7]/20 rounded-xl border border-[#E7B6A5]/30">
+                    <Building2 className="w-5 h-5 text-[#8E3A47] shrink-0" />
+                    <select
+                      value={searchCategory}
+                      onChange={(e) => setSearchCategory(e.target.value)}
+                      className="bg-transparent w-full text-[#4A1F23] outline-none cursor-pointer text-sm font-medium"
+                    >
+                      <option value="All Categories">All Categories</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full px-3 py-2.5 bg-[#F5E1C7]/20 rounded-xl border border-[#E7B6A5]/30">
+                    <MapPin className="w-5 h-5 text-[#8E3A47] shrink-0" />
+                    <input
+                      type="text"
+                      value={searchLocation}
+                      onChange={(e) => setSearchLocation(e.target.value)}
+                      placeholder="Search by community or building"
+                      className="bg-transparent w-full text-[#4A1F23] outline-none placeholder:text-[#8E3A47]/60 text-sm font-medium"
+                    />
+                  </div>
+
+                  <Link
+                    href={searchHref}
+                    className="w-full md:w-auto bg-[#8E3A47] hover:bg-[#6B2B2E] text-[#F5E1C7] font-bold px-8 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shrink-0 shadow-lg"
+                  >
+                    <Search className="w-4 h-4" />
+                    <span>Search</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        <button
+          onClick={prevSlide}
+          className="absolute left-6 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full bg-black/30 hover:bg-[#8E3A47] text-white backdrop-blur-md transition-all border border-white/20 cursor-pointer shadow-lg"
+          aria-label="Previous slide"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <button
+          onClick={nextSlide}
+          className="absolute right-6 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full bg-black/30 hover:bg-[#8E3A47] text-white backdrop-blur-md transition-all border border-white/20 cursor-pointer shadow-lg"
+          aria-label="Next slide"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3">
+          {HERO_SLIDES.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`h-2.5 rounded-full transition-all duration-300 ${
+                index === currentSlide ? 'w-10 bg-[#F5E1C7]' : 'w-2.5 bg-white/50 hover:bg-white'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
             />
           ))}
-        </div>
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] z-10" />
-
-        <div className="relative z-20 h-full flex flex-col justify-center px-6 md:px-12">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-center w-full">
-            <div className="lg:col-span-3">
-              <Reveal>
-                <span className="inline-block text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-6 border-l-2 border-[#C5A880] pl-3 text-white">
-                  Luxury &amp; Investment Real Estate, Dubai
-                </span>
-                <h1 className={`${fraunces.className} text-5xl md:text-6xl lg:text-7xl font-medium tracking-tight mb-6 leading-[1.05] text-white`}>
-                  Find your exceptional property in{' '}
-                  <em className="italic text-[#C5A880] not-italic">the heart of Dubai</em>
-                </h1>
-                <p className="text-gray-200 text-lg max-w-xl font-light leading-relaxed mb-10">
-                  An exclusive selection of apartments, villas and townhouses, matched with the legal and financial guidance
-                  international buyers need to invest with confidence.
-                </p>
-              </Reveal>
-            </div>
-
-            {/* KEY METRICS / STATS */}
-            <div className="lg:col-span-2 grid grid-cols-2 gap-6">
-              {[
-                { value: '8–12%', label: 'Average rental yield' },
-                { value: '0%', label: 'Property & income tax' },
-                { value: 'AED 5M+', label: 'Golden Visa eligibility' },
-                { value: '100%', label: 'Foreign ownership' },
-              ].map((stat, i) => (
-                <Reveal key={stat.label} delay={i * 100}>
-                  <div className="p-6 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-center">
-                    <p className={`${fraunces.className} text-3xl text-white mb-1`}>{stat.value}</p>
-                    <p className="text-gray-300 text-xs leading-snug">{stat.label}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-
-          {/* SEARCH BAR POSITIONED JUST BELOW STATS / HERO */}
-          <div className="relative z-30 w-full max-w-5xl mx-auto bg-white border border-[#D8CEBE] p-4 md:p-6 rounded-3xl shadow-2xl flex flex-col md:flex-row gap-4 items-center mt-16">
-            <div className="w-full md:w-auto flex-1 px-4 py-2 border-r border-[#D8CEBE] hidden md:block">
-              <p className="text-[#2C181A] font-semibold text-sm">Find the home you want, or the investment that gets you there, with Oravya.</p>
-            </div>
-
-            <div className="flex items-center gap-3 w-full md:w-auto bg-[#F2EDE4] px-4 py-3 rounded-xl border border-[#D8CEBE]">
-              <Building2 className="text-[#4A151B] w-5 h-5 shrink-0" />
-              <select
-                value={searchCategory}
-                onChange={(e) => setSearchCategory(e.target.value)}
-                className="bg-transparent w-full text-[#2C181A] outline-none cursor-pointer text-sm font-medium"
-              >
-                <option className="bg-[#F2EDE4]">All Categories</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.name} className="bg-[#F2EDE4]">
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-3 w-full md:w-auto bg-[#F2EDE4] px-4 py-3 rounded-xl border border-[#D8CEBE]">
-              <MapPin className="text-[#4A151B] w-5 h-5 shrink-0" />
-              <input
-                type="text"
-                value={searchLocation}
-                onChange={(e) => setSearchLocation(e.target.value)}
-                placeholder="Search by community or building"
-                className="bg-transparent w-full text-[#2C181A] outline-none placeholder:text-[#A8989A] text-sm font-medium"
-              />
-            </div>
-
-            <Link
-              href={searchHref}
-              className="w-full md:w-auto bg-[#4A151B] text-[#F2EDE4] font-bold px-10 py-4 rounded-xl hover:bg-[#3B1115] transition flex items-center justify-center gap-2 shrink-0 shadow-md"
-            >
-              <Search className="w-5 h-5" />
-              Search
-            </Link>
-          </div>
         </div>
       </section>
 
       {/* TRUST BAR */}
-      <section className="px-6 py-12 max-w-7xl mx-auto border-y border-[#D8CEBE] my-12">
+      <section className="px-6 py-12 max-w-7xl mx-auto border-y border-[#E7B6A5]/40 my-12 bg-white/40 backdrop-blur-sm rounded-2xl shadow-sm">
         <Reveal>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              { value: '15,000+', label: 'Google Reviews' },
-              { value: '10+', label: 'Years Experience' },
-              { value: '500+', label: 'Expert Agents' },
-              { value: 'AED 1B+', label: 'Assets Managed' },
+              { value: '100%', label: 'Freehold Ownership' },
+              { value: '0%', label: 'Property & Income Tax' },
+              { value: 'VIP', label: 'Off-Market Access' },
+              { value: '24/7', label: 'Dedicated Support' },
             ].map((stat, i) => (
               <Reveal key={stat.label} delay={i * 100}>
                 <div className="flex flex-col items-center">
-                  <p className={`${fraunces.className} text-3xl font-medium text-[#4A151B]`}>{stat.value}</p>
-                  <p className="text-[#8C6D53] text-xs uppercase tracking-widest font-semibold">{stat.label}</p>
+                  <p className={`${fraunces.className} text-3xl font-medium text-[#4A1F23]`}>{stat.value}</p>
+                  <p className="text-[#8E3A47] text-xs uppercase tracking-widest font-semibold mt-1">{stat.label}</p>
                 </div>
               </Reveal>
             ))}
@@ -297,21 +331,21 @@ export default function HomePage() {
         </Reveal>
       </section>
 
-      {/* DEVELOPER PARTNERSHIPS (DYNAMIC FROM ADMIN DATABASE READY) */}
+      {/* DEVELOPER PARTNERSHIPS */}
       <section className="px-6 py-16 max-w-7xl mx-auto text-center">
         <Reveal>
-          <span className="text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-3 block">Developers</span>
-          <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium mb-4 text-[#2C181A]`}>
-            Trusted partner of Dubai's biggest developers
+          <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Developers</span>
+          <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium mb-4 text-[#4A1F23]`}>
+            Trusted partner of Dubai&apos;s biggest developers
           </h2>
-          <p className="text-[#685248] max-w-2xl mx-auto text-sm md:text-base font-light mb-12">
-            We sell direct from master developers, ensuring launch prices and payment plans reach you first. Managed dynamically via admin portal.
+          <p className="text-[#6B2B2E]/80 max-w-2xl mx-auto text-sm md:text-base font-light mb-12">
+            We sell direct from master developers, ensuring launch prices and payment plans reach you first.
           </p>
         </Reveal>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-6 items-center">
           {['Emaar', 'Binghatti', 'Dubai Properties', 'Damac', 'Meraas'].map((dev, i) => (
             <Reveal key={dev} delay={i * 100}>
-              <div className="flex items-center justify-center p-6 bg-white border border-[#D8CEBE] rounded-2xl font-bold text-[#4A151B] text-base shadow-sm hover:border-[#4A151B] transition duration-300 group">
+              <div className="flex items-center justify-center p-6 bg-white border border-[#E7B6A5]/50 rounded-2xl font-bold text-[#4A1F23] text-base shadow-sm hover:border-[#8E3A47] transition duration-300 group">
                 <span className="group-hover:scale-105 transition duration-300">{dev}</span>
               </div>
             </Reveal>
@@ -319,7 +353,131 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* QUICK ACTIONS / CTAs */}
+      {/* ================= LATEST OFF-PLAN & NEW LAUNCHES (PLACED AFTER PARTNERS) ================= */}
+      <section className="px-6 py-20 max-w-7xl mx-auto">
+        <Reveal>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
+            <div>
+              <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Off Plan</span>
+              <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#4A1F23]`}>
+                The latest launches in Dubai
+              </h2>
+              <p className="text-[#6B2B2E]/80 font-light mt-2">
+                Newly released projects from the developers building the city, with the payment plan and handover quarter stated up front.
+              </p>
+            </div>
+            <Link href="/properties?type=Off-Plan" className="inline-flex items-center gap-2 text-sm font-semibold text-[#8E3A47] hover:underline shrink-0">
+              View all projects <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </Reveal>
+
+        {featured.length === 0 ? (
+          <div className="bg-white/70 border border-[#E7B6A5]/50 rounded-2xl p-10 text-center">
+            <p className="text-[#6B2B2E]/80 text-sm">No off-plan projects currently listed.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {featured.slice(0, 3).map((property, i) => (
+              <Reveal key={property.id} delay={i * 90}>
+                <div className="bg-white border border-[#E7B6A5]/50 rounded-2xl overflow-hidden hover:border-[#8E3A47] transition duration-300 group shadow-sm h-full flex flex-col justify-between hover:shadow-lg">
+                  <div>
+                    <div className="h-64 relative bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url('${property.images[0]}')` }}>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent group-hover:scale-105 transition duration-500" />
+                      <span className="absolute top-4 left-4 bg-[#8E3A47] text-[#F5E1C7] text-xs font-bold px-3 py-1 rounded-full z-10 shadow-md">
+                        {property.status || 'New Launch'}
+                      </span>
+                      {property.handover && (
+                        <span className="absolute bottom-4 left-4 text-white text-xs font-medium bg-black/40 backdrop-blur-md px-3 py-1 rounded-lg">
+                          Handover: {property.handover}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-6">
+                      <span className="text-xs text-[#8E3A47] uppercase tracking-wider font-semibold">{property.type}</span>
+                      <h3 className="text-lg font-bold mt-1 mb-2 text-[#4A1F23] group-hover:text-[#8E3A47] transition">{property.name}</h3>
+                      <p className="text-[#6B2B2E]/80 text-sm flex items-center gap-1 mb-4">
+                        <MapPin className="w-4 h-4 text-[#8E3A47]" /> {property.location}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-6 pt-0">
+                    <div className="flex justify-between items-center pt-4 border-t border-[#E7B6A5]/40">
+                      <div>
+                        <span className="text-[10px] uppercase text-[#8E3A47] block font-semibold">Starting from</span>
+                        <span className="font-bold text-[#4A1F23]">{formatPrice(property.price)}</span>
+                      </div>
+                      <Link
+                        href={`/properties/${property.id}`}
+                        className="text-xs bg-[#F5E1C7]/30 hover:bg-[#8E3A47] hover:text-[#F5E1C7] border border-[#E7B6A5] text-[#4A1F23] px-4 py-2.5 rounded-xl transition font-medium"
+                      >
+                        Explore
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ================= MOST TRENDING PROJECTS (VILLAS, LUXURY, FLATS) ================= */}
+      <section className="px-6 py-16 max-w-7xl mx-auto border-t border-[#E7B6A5]/40 bg-white/30 rounded-3xl my-12">
+        <Reveal>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
+            <div>
+              <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Trending</span>
+              <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#4A1F23]`}>
+                Most trending projects in Dubai
+              </h2>
+              <p className="text-[#6B2B2E]/80 font-light mt-2">
+                Explore high-demand property types curated for lifestyle and capital appreciation.
+              </p>
+            </div>
+            <Link href="/properties" className="inline-flex items-center gap-2 text-sm font-semibold text-[#8E3A47] hover:underline shrink-0">
+              View all projects <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </Reveal>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {[
+            { title: 'Villas', subtitle: 'Spacious family homes & private gardens', icon: Home, image: 'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg?auto=compress&cs=tinysrgb&w=800', type: 'Villa' },
+            { title: 'Luxury', subtitle: 'Ultra-exclusive penthouses & waterfront estates', icon: Crown, image: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800', type: 'Luxury' },
+            { title: 'Flats', subtitle: 'Modern apartments in prime downtown locations', icon: Building2, image: 'https://images.pexels.com/photos/276724/pexels-photo-276724.jpeg?auto=compress&cs=tinysrgb&w=800', type: 'Apartment' }
+          ].map((item, i) => {
+            const Icon = item.icon;
+            return (
+              <Reveal key={item.title} delay={i * 100}>
+                <Link
+                  href={`/properties?type=${encodeURIComponent(item.type)}`}
+                  className="group relative h-80 rounded-3xl overflow-hidden shadow-md flex flex-col justify-end p-6 border border-[#E7B6A5]/50 block transition duration-500 hover:shadow-xl"
+                >
+                  <div
+                    className="absolute inset-0 bg-cover bg-center group-hover:scale-110 transition duration-700 ease-out"
+                    style={{ backgroundImage: `url('${item.image}')` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#4A1F23]/90 via-[#4A1F23]/30 to-transparent group-hover:from-[#4A1F23] transition duration-500" />
+                  
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-xl bg-[#F5E1C7]/20 backdrop-blur-md flex items-center justify-center text-[#F5E1C7] mb-3 border border-[#E7B6A5]/30">
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <h3 className={`${fraunces.className} text-2xl font-bold text-[#F5E1C7] mb-1`}>{item.title}</h3>
+                    <p className="text-xs text-[#F5E1C7]/80 font-light mb-4">{item.subtitle}</p>
+                    <span className="inline-flex items-center gap-2 text-xs font-semibold text-[#E7B6A5] uppercase tracking-wider group-hover:translate-x-1 transition duration-300">
+                      Explore properties <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                </Link>
+              </Reveal>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* QUICK ACTIONS / CTAS */}
       <section className="px-6 py-10 max-w-7xl mx-auto">
         <Reveal>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -329,17 +487,17 @@ export default function HomePage() {
                 <Reveal key={cta.id} delay={i * 60}>
                   <Link
                     href={cta.href}
-                    className="group relative overflow-hidden rounded-2xl border border-[#D8CEBE] bg-[#EBE4DA] p-5 shadow-sm hover:border-[#4A151B]/50 hover:shadow-md transition duration-300 h-full flex flex-col"
+                    className="group relative overflow-hidden rounded-2xl border border-[#E7B6A5]/50 bg-white/70 backdrop-blur-md p-5 shadow-sm hover:border-[#8E3A47] hover:shadow-md transition duration-300 h-full flex flex-col"
                   >
-                    <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-[#C5A880]/15 group-hover:bg-[#C5A880]/25 transition" />
-                    <div className="w-11 h-11 rounded-xl bg-[#F2EDE4] border border-[#D8CEBE] flex items-center justify-center mb-4 group-hover:border-[#4A151B]/30 transition">
-                      <Icon className="w-5 h-5 text-[#4A151B]" />
+                    <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-[#E7B6A5]/30 group-hover:bg-[#E7B6A5]/50 transition" />
+                    <div className="w-11 h-11 rounded-xl bg-[#F5E1C7] border border-[#E7B6A5] flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                      <Icon className="w-5 h-5 text-[#8E3A47]" />
                     </div>
-                    <h3 className="font-bold text-[#2C181A] text-sm mb-1 leading-snug">{cta.label}</h3>
-                    <p className="text-[11px] text-[#685248] font-light leading-relaxed mb-3 flex-1">
+                    <h3 className="font-bold text-[#4A1F23] text-sm mb-1 leading-snug">{cta.label}</h3>
+                    <p className="text-[11px] text-[#6B2B2E]/80 font-light leading-relaxed mb-3 flex-1">
                       {cta.description || 'Explore with Oravya'}
                     </p>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#4A151B]">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#8E3A47]">
                       Continue <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
                     </span>
                   </Link>
@@ -351,16 +509,16 @@ export default function HomePage() {
       </section>
 
       {/* PROPERTY TYPES */}
-      <SectionBackdrop variant="soft" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE]">
+      <SectionBackdrop variant="soft" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#E7B6A5]/40 my-12 rounded-3xl bg-white/30">
         <Reveal>
           <div className="flex justify-between items-end mb-12">
             <div>
-              <span className="text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-3 block">Property Types</span>
-              <h2 className={`${fraunces.className} text-2xl md:text-4xl font-medium tracking-tight text-[#2C181A]`}>
+              <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Property Types</span>
+              <h2 className={`${fraunces.className} text-2xl md:text-4xl font-medium tracking-tight text-[#4A1F23]`}>
                 Explore by category
               </h2>
             </div>
-            <Link href="/properties" className="hidden sm:flex items-center gap-2 text-sm text-[#4A151B] hover:underline font-medium transition">
+            <Link href="/properties" className="hidden sm:flex items-center gap-2 text-sm text-[#8E3A47] hover:underline font-medium transition">
               View all properties <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -373,13 +531,13 @@ export default function HomePage() {
               <Reveal key={item.id} delay={i * 50}>
                 <Link
                   href={`/properties?type=${encodeURIComponent(item.name)}`}
-                  className="group relative bg-[#EBE4DA]/85 border border-[#D8CEBE] p-7 rounded-2xl hover:border-[#4A151B]/40 transition duration-300 overflow-hidden shadow-sm h-full backdrop-blur-md block"
+                  className="group relative bg-white/80 border border-[#E7B6A5]/50 p-7 rounded-2xl hover:border-[#8E3A47] transition duration-300 overflow-hidden shadow-sm h-full backdrop-blur-md block"
                 >
-                  <div className="absolute top-0 right-0 w-28 h-28 bg-[#C5A880]/10 rounded-full blur-2xl group-hover:bg-[#C5A880]/20 transition" />
-                  <Icon className="w-7 h-7 text-[#4A151B] mb-5 group-hover:scale-110 transition duration-300" />
-                  <h4 className="text-lg font-bold mb-2 text-[#2C181A]">{item.name}</h4>
-                  <p className="text-[#685248] text-xs mb-4 font-light leading-relaxed line-clamp-3">{item.description}</p>
-                  <span className="text-xs text-[#C5A880] uppercase tracking-wider font-semibold inline-flex items-center gap-1">
+                  <div className="absolute top-0 right-0 w-28 h-28 bg-[#E7B6A5]/20 rounded-full blur-2xl group-hover:bg-[#E7B6A5]/40 transition" />
+                  <Icon className="w-7 h-7 text-[#8E3A47] mb-5 group-hover:scale-110 transition duration-300" />
+                  <h4 className="text-lg font-bold mb-2 text-[#4A1F23]">{item.name}</h4>
+                  <p className="text-[#6B2B2E]/80 text-xs mb-4 font-light leading-relaxed line-clamp-3">{item.description}</p>
+                  <span className="text-xs text-[#8E3A47] uppercase tracking-wider font-semibold inline-flex items-center gap-1">
                     Explore <ArrowRight className="w-3 h-3" />
                   </span>
                 </Link>
@@ -390,19 +548,19 @@ export default function HomePage() {
       </SectionBackdrop>
 
       {/* OUR SERVICES */}
-      <section id="services" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE] scroll-mt-24">
+      <section id="services" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#E7B6A5]/40 scroll-mt-24">
         <Reveal>
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14">
             <div className="max-w-2xl">
-              <span className="text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-3 block">Our Services</span>
-              <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#2C181A]`}>
+              <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Our Services</span>
+              <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#4A1F23]`}>
                 Every stage of a Dubai property journey
               </h2>
-              <p className="text-[#685248] font-light">
+              <p className="text-[#6B2B2E]/80 font-light">
                 Off-plan, resale, luxury, rentals and investment consultancy — managed end to end by Oravya.
               </p>
             </div>
-            <Link href="/services" className="inline-flex items-center gap-2 text-sm font-semibold text-[#4A151B] hover:underline shrink-0">
+            <Link href="/services" className="inline-flex items-center gap-2 text-sm font-semibold text-[#8E3A47] hover:underline shrink-0">
               View all services <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -415,11 +573,11 @@ export default function HomePage() {
               <Reveal key={service.id} delay={i * 70}>
                 <Link
                   href={`/contact?service=${encodeURIComponent(service.title)}`}
-                  className="h-full bg-[#EBE4DA]/80 border border-[#D8CEBE] p-6 rounded-2xl hover:border-[#4A151B]/40 transition flex flex-col shadow-sm group"
+                  className="h-full bg-white/80 border border-[#E7B6A5]/50 p-6 rounded-2xl hover:border-[#8E3A47] transition flex flex-col shadow-sm group"
                 >
-                  <Icon className="w-7 h-7 text-[#4A151B] mb-5 group-hover:scale-110 transition" />
-                  <h3 className="font-bold text-[#2C181A] mb-2 leading-snug">{service.title}</h3>
-                  <p className="text-[#685248] text-xs font-light leading-relaxed mt-auto">{service.tagline}</p>
+                  <Icon className="w-7 h-7 text-[#8E3A47] mb-5 group-hover:scale-110 transition" />
+                  <h3 className="font-bold text-[#4A1F23] mb-2 leading-snug">{service.title}</h3>
+                  <p className="text-[#6B2B2E]/80 text-xs font-light leading-relaxed mt-auto">{service.tagline}</p>
                 </Link>
               </Reveal>
             );
@@ -427,116 +585,61 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FEATURED PROPERTIES */}
-      <SectionBackdrop variant="villa" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE]">
-        <Reveal>
-          <div className="max-w-2xl mb-16">
-            <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#2C181A]`}>
-              Exceptional projects in Dubai
-            </h2>
-            <p className="text-[#685248] font-light">Live selection from our database — prime locations for strong returns.</p>
-          </div>
-        </Reveal>
-
-        {featured.length === 0 ? (
-          <div className="bg-[#EBE4DA]/70 border border-[#D8CEBE] rounded-2xl p-10 text-center">
-            <p className="text-[#685248] text-sm mb-4">No properties in the database yet.</p>
-            <Link href="/properties" className="text-sm font-semibold text-[#4A151B] hover:underline">
-              Browse properties
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {featured.map((property, i) => (
-              <Reveal key={property.id} delay={i * 90}>
-                <div className="bg-[#EBE4DA]/90 border border-[#D8CEBE] rounded-2xl overflow-hidden hover:border-[#4A151B]/40 transition group shadow-sm h-full flex flex-col justify-between">
-                  <div>
-                    <div className="h-56 relative bg-cover bg-center" style={{ backgroundImage: `url('${property.images[0]}')` }}>
-                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition duration-300" />
-                      <span className="absolute top-4 left-4 bg-[#4A151B] text-[#F2EDE4] text-xs font-bold px-3 py-1 rounded-full z-10 shadow-md">
-                        {property.status || 'Exclusive'}
-                      </span>
-                    </div>
-                    <div className="p-6">
-                      <span className="text-xs text-[#C5A880] uppercase tracking-wider font-semibold">{property.type}</span>
-                      <h3 className="text-lg font-bold mt-1 mb-2 text-[#2C181A] group-hover:text-[#4A151B] transition">{property.name}</h3>
-                      <p className="text-[#685248] text-sm flex items-center gap-1 mb-4">
-                        <MapPin className="w-4 h-4 text-[#8C6D53]" /> {property.location}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="p-6 pt-0">
-                    <div className="flex justify-between items-center pt-4 border-t border-[#D8CEBE]">
-                      <span className="font-bold text-[#4A151B]">{formatPrice(property.price)}</span>
-                      <Link
-                        href={`/properties/${property.id}`}
-                        className="text-xs bg-[#F2EDE4] hover:bg-[#4A151B] hover:text-[#F2EDE4] border border-[#D8CEBE] text-[#2C181A] px-3 py-2 rounded-lg transition font-medium"
-                      >
-                        Discover
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        )}
-      </SectionBackdrop>
-
       {/* REMOTE CTA */}
-      <SectionBackdrop variant="lobby" rounded={false} className="px-6 py-20 border-y border-[#D8CEBE]">
+      <section className="px-6 py-20 border-y border-[#E7B6A5]/40 bg-[#4A1F23] text-[#F5E1C7]">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <Reveal>
             <div>
-              <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight mb-6 text-[#2C181A]`}>
+              <span className="text-xs uppercase tracking-widest text-[#E7B6A5] font-semibold mb-3 block">Remote Advisory</span>
+              <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight mb-6 text-[#F5E1C7]`}>
                 Plan your real estate project remotely
               </h2>
-              <p className="text-[#685248] mb-8 font-light leading-relaxed">
+              <p className="text-[#F5E1C7]/90 mb-8 font-light leading-relaxed">
                 Whether you want to invest in a new off-plan project in Dubai, purchase a holiday home, or book a seasonal
                 rental, our experts guide you step by step.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/contact" className="bg-[#4A151B] text-[#F2EDE4] font-bold px-6 py-3.5 rounded-xl hover:bg-[#3B1115] transition text-center shadow-md">
+                <Link href="/contact" className="bg-[#F5E1C7] text-[#4A1F23] font-bold px-6 py-3.5 rounded-xl hover:bg-white transition text-center shadow-lg">
                   Book an online meeting
                 </Link>
-                <Link href="/holiday-homes" className="border border-[#C5A880] text-[#2C181A] font-semibold px-6 py-3.5 rounded-xl hover:bg-[#F2EDE4] transition text-center">
+                <Link href="/holiday-homes" className="border-2 border-[#E7B6A5] text-[#F5E1C7] font-semibold px-6 py-3.5 rounded-xl hover:bg-[#F5E1C7]/10 transition text-center">
                   Book a holiday home
                 </Link>
               </div>
             </div>
           </Reveal>
           <Reveal delay={100}>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-[#EBE4DA] border border-[#D8CEBE] p-6 rounded-2xl flex flex-col justify-between shadow-sm">
-                <Calendar className="w-8 h-8 text-[#4A151B] mb-4" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-[#6B2B2E] backdrop-blur-md border border-[#E7B6A5]/40 p-6 rounded-2xl flex flex-col justify-between shadow-xl">
+                <Calendar className="w-8 h-8 text-[#E7B6A5] mb-4" />
                 <div>
-                  <h4 className="font-bold mb-1 text-[#2C181A]">Video consultation</h4>
-                  <p className="text-xs text-[#685248]">Speak directly with a Dubai market expert advisor.</p>
+                  <h4 className="font-bold mb-1 text-[#F5E1C7] text-base">Video consultation</h4>
+                  <p className="text-xs text-[#F5E1C7]/80 font-light leading-relaxed">Speak directly with a Dubai market expert advisor.</p>
                 </div>
               </div>
-              <div className="bg-[#EBE4DA] border border-[#D8CEBE] p-6 rounded-2xl flex flex-col justify-between mt-6 shadow-sm">
-                <ShieldCheck className="w-8 h-8 text-[#4A151B] mb-4" />
+              <div className="bg-[#6B2B2E] backdrop-blur-md border border-[#E7B6A5]/40 p-6 rounded-2xl flex flex-col justify-between shadow-xl sm:mt-6">
+                <ShieldCheck className="w-8 h-8 text-[#E7B6A5] mb-4" />
                 <div>
-                  <h4 className="font-bold mb-1 text-[#2C181A]">Secure transactions</h4>
-                  <p className="text-xs text-[#685248]">Secure transactions and transparent deposit management.</p>
+                  <h4 className="font-bold mb-1 text-[#F5E1C7] text-base">Secure transactions</h4>
+                  <p className="text-xs text-[#F5E1C7]/80 font-light leading-relaxed">Secure transactions and transparent deposit management.</p>
                 </div>
               </div>
             </div>
           </Reveal>
         </div>
-      </SectionBackdrop>
+      </section>
 
       {/* WHY ORAVYA */}
       <section className="px-6 py-20 max-w-7xl mx-auto">
         <Reveal>
           <div className="max-w-2xl mb-16">
-            <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#2C181A]`}>
+            <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight mb-4 text-[#4A1F23]`}>
               Why global investors choose Oravya
             </h2>
-            <p className="text-[#685248] font-light">End-to-end advisory tailored to international high-net-worth individuals.</p>
+            <p className="text-[#6B2B2E]/80 font-light">End-to-end advisory tailored to international high-net-worth individuals.</p>
           </div>
         </Reveal>
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#D8CEBE] border-t border-b border-[#D8CEBE]">
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#E7B6A5]/40 border-t border-b border-[#E7B6A5]/40">
           {[
             { title: 'Off-market access', desc: 'Private listings and prime off-plan units before public release.' },
             { title: 'Legal & financial guidance', desc: 'Registration, golden visa applications, and tax structuring.' },
@@ -544,9 +647,9 @@ export default function HomePage() {
           ].map((item, i) => (
             <Reveal key={item.title} delay={i * 90}>
               <div className="p-8 md:px-8 md:py-10">
-                <CheckCircle2 className="w-6 h-6 text-[#4A151B] mb-4" />
-                <h3 className="text-lg font-bold mb-2 text-[#2C181A]">{item.title}</h3>
-                <p className="text-[#685248] text-sm font-light leading-relaxed">{item.desc}</p>
+                <CheckCircle2 className="w-6 h-6 text-[#8E3A47] mb-4" />
+                <h3 className="text-lg font-bold mb-2 text-[#4A1F23]">{item.title}</h3>
+                <p className="text-[#6B2B2E]/80 text-sm font-light leading-relaxed">{item.desc}</p>
               </div>
             </Reveal>
           ))}
@@ -554,12 +657,12 @@ export default function HomePage() {
       </section>
 
       {/* FAQ SECTION */}
-      <SectionBackdrop variant="night" className="px-6 py-20 max-w-5xl mx-auto border-t border-[#D8CEBE] scroll-mt-24">
+      <SectionBackdrop variant="night" className="px-6 py-20 max-w-5xl mx-auto border-t border-[#E7B6A5]/40 scroll-mt-24 bg-white/30 rounded-3xl my-12">
         <div id="faqs">
           <Reveal>
             <div className="text-center max-w-2xl mx-auto mb-16">
-              <span className="text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-3 block">Frequently Asked Questions</span>
-              <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#2C181A]`}>
+              <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Frequently Asked Questions</span>
+              <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#4A1F23]`}>
                 Everything you need to know about investing in Dubai
               </h2>
             </div>
@@ -572,9 +675,9 @@ export default function HomePage() {
               { q: 'Can I buy a property remotely from abroad?', a: 'Absolutely. Oravya handles remote transactions from virtual viewings to title deed registration.' },
             ].map((faq, i) => (
               <Reveal key={faq.q} delay={i * 80}>
-                <div className="bg-[#EBE4DA]/85 border border-[#D8CEBE] p-6 md:p-8 rounded-2xl shadow-sm backdrop-blur-md">
-                  <h3 className="text-lg font-bold text-[#2C181A] mb-2">{faq.q}</h3>
-                  <p className="text-[#685248] text-sm font-light leading-relaxed">{faq.a}</p>
+                <div className="bg-white border border-[#E7B6A5]/50 p-6 md:p-8 rounded-2xl shadow-sm backdrop-blur-md">
+                  <h3 className="text-lg font-bold text-[#4A1F23] mb-2">{faq.q}</h3>
+                  <p className="text-[#6B2B2E]/80 text-sm font-light leading-relaxed">{faq.a}</p>
                 </div>
               </Reveal>
             ))}
@@ -583,40 +686,40 @@ export default function HomePage() {
       </SectionBackdrop>
 
       {/* TESTIMONIALS + SUBMIT REVIEW */}
-      <section id="testimonials" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#D8CEBE] scroll-mt-24">
+      <section id="testimonials" className="px-6 py-20 max-w-7xl mx-auto border-t border-[#E7B6A5]/40 scroll-mt-24">
         <Reveal>
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-3 block">Client Testimonials</span>
-            <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#2C181A]`}>
+            <span className="text-xs uppercase tracking-widest text-[#8E3A47] font-semibold mb-3 block">Client Testimonials</span>
+            <h2 className={`${fraunces.className} text-3xl md:text-4xl font-medium tracking-tight text-[#4A1F23]`}>
               Trusted by global investors &amp; homeowners
             </h2>
-            <p className="text-[#685248] text-sm font-light mt-3">Only approved reviews appear here. Share yours below.</p>
+            <p className="text-[#6B2B2E]/80 text-sm font-light mt-3">Only approved reviews appear here. Share yours below.</p>
           </div>
         </Reveal>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
           {reviews.length === 0 ? (
-            <p className="text-sm text-[#8C6D53] col-span-3 text-center">No approved reviews yet.</p>
+            <p className="text-sm text-[#8E3A47] col-span-3 text-center">No approved reviews yet.</p>
           ) : (
             reviews.slice(0, 6).map((review, i) => (
               <Reveal key={review.id} delay={i * 90}>
-                <div className="bg-[#EBE4DA]/80 border border-[#D8CEBE] p-8 rounded-2xl shadow-sm flex flex-col justify-between h-full">
+                <div className="bg-white border border-[#E7B6A5]/50 p-8 rounded-2xl shadow-sm flex flex-col justify-between h-full">
                   <div>
-                    <div className="flex gap-1 mb-4 text-[#C5A880]">
+                    <div className="flex gap-1 mb-4 text-[#8E3A47]">
                       {[...Array(review.rating || 5)].map((_, idx) => (
-                        <Star key={idx} className="w-4 h-4 fill-[#C5A880]" />
+                        <Star key={idx} className="w-4 h-4 fill-[#8E3A47]" />
                       ))}
                     </div>
-                    <p className="text-[#685248] text-sm font-light leading-relaxed italic mb-6">&ldquo;{review.quote}&rdquo;</p>
+                    <p className="text-[#6B2B2E]/90 text-sm font-light leading-relaxed italic mb-6">&ldquo;{review.quote}&rdquo;</p>
                   </div>
-                  <div className="pt-4 border-t border-[#D8CEBE]">
-                    <p className="font-bold text-[#2C181A] text-sm">{review.authorName}</p>
-                    <p className="text-xs text-[#8C6D53]">
+                  <div className="pt-4 border-t border-[#E7B6A5]/40">
+                    <p className="font-bold text-[#4A1F23] text-sm">{review.authorName}</p>
+                    <p className="text-xs text-[#8E3A47]">
                       {review.location}
                       {review.investment ? (
                         <>
                           {' '}
-                          • <span className="font-medium text-[#4A151B]">{review.investment}</span>
+                          • <span className="font-medium text-[#4A1F23]">{review.investment}</span>
                         </>
                       ) : null}
                     </p>
@@ -628,17 +731,17 @@ export default function HomePage() {
         </div>
 
         <Reveal>
-          <div className="max-w-2xl mx-auto bg-[#EBE4DA]/90 border border-[#D8CEBE] rounded-3xl p-8 shadow-sm">
-            <h3 className={`${fraunces.className} text-2xl text-[#2C181A] mb-2`}>Share your experience</h3>
-            <p className="text-sm text-[#685248] font-light mb-6">
+          <div className="max-w-2xl mx-auto bg-white border border-[#E7B6A5]/50 rounded-3xl p-8 shadow-sm">
+            <h3 className={`${fraunces.className} text-2xl text-[#4A1F23] mb-2`}>Share your experience</h3>
+            <p className="text-sm text-[#6B2B2E]/80 font-light mb-6">
               Your review is submitted for admin approval before it appears on the website.
             </p>
             {reviewSent ? (
               <div className="text-center py-8">
-                <CheckCircle2 className="w-12 h-12 text-[#4A151B] mx-auto mb-4" />
-                <p className="font-semibold text-[#2C181A] mb-2">Thank you — review received</p>
-                <p className="text-sm text-[#685248]">It will appear once approved by Oravya.</p>
-                <button onClick={() => setReviewSent(false)} className="mt-4 text-sm font-semibold text-[#4A151B] hover:underline">
+                <CheckCircle2 className="w-12 h-12 text-[#8E3A47] mx-auto mb-4" />
+                <p className="font-semibold text-[#4A1F23] mb-2">Thank you — review received</p>
+                <p className="text-sm text-[#6B2B2E]/80">It will appear once approved by Oravya.</p>
+                <button onClick={() => setReviewSent(false)} className="mt-4 text-sm font-semibold text-[#8E3A47] hover:underline cursor-pointer">
                   Submit another
                 </button>
               </div>
@@ -650,14 +753,14 @@ export default function HomePage() {
                     placeholder="Your name"
                     value={reviewForm.authorName}
                     onChange={(e) => setReviewForm({ ...reviewForm, authorName: e.target.value })}
-                    className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#4A151B]"
+                    className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] text-[#4A1F23]"
                   />
                   <input
                     type="text"
                     placeholder="City, Country"
                     value={reviewForm.location}
                     onChange={(e) => setReviewForm({ ...reviewForm, location: e.target.value })}
-                    className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#4A151B]"
+                    className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] text-[#4A1F23]"
                   />
                 </div>
                 <input
@@ -665,18 +768,18 @@ export default function HomePage() {
                   placeholder="Investment type (optional)"
                   value={reviewForm.investment}
                   onChange={(e) => setReviewForm({ ...reviewForm, investment: e.target.value })}
-                  className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#4A151B]"
+                  className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] text-[#4A1F23]"
                 />
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase tracking-wider text-[#8C6D53] font-medium">Rating</span>
+                  <span className="text-xs uppercase tracking-wider text-[#8E3A47] font-medium">Rating</span>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button
                       key={n}
                       type="button"
                       onClick={() => setReviewForm({ ...reviewForm, rating: n })}
-                      className="p-1"
+                      className="p-1 cursor-pointer"
                     >
-                      <Star className={`w-5 h-5 ${n <= reviewForm.rating ? 'fill-[#C5A880] text-[#C5A880]' : 'text-[#D8CEBE]'}`} />
+                      <Star className={`w-5 h-5 ${n <= reviewForm.rating ? 'fill-[#8E3A47] text-[#8E3A47]' : 'text-[#E7B6A5]'}`} />
                     </button>
                   ))}
                 </div>
@@ -685,13 +788,13 @@ export default function HomePage() {
                   placeholder="Your review..."
                   value={reviewForm.quote}
                   onChange={(e) => setReviewForm({ ...reviewForm, quote: e.target.value })}
-                  className="w-full bg-[#F2EDE4] border border-[#D8CEBE] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#4A151B] resize-none"
+                  className="w-full bg-[#F5E1C7]/20 border border-[#E7B6A5]/50 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#8E3A47] resize-none text-[#4A1F23]"
                 />
                 {reviewError && <p className="text-sm text-red-600">{reviewError}</p>}
                 <button
                   type="submit"
                   disabled={reviewSubmitting}
-                  className="w-full flex items-center justify-center gap-2 bg-[#4A151B] text-[#F2EDE4] font-bold px-6 py-3.5 rounded-xl hover:bg-[#3B1115] transition shadow-md disabled:opacity-60"
+                  className="w-full flex items-center justify-center gap-2 bg-[#8E3A47] text-[#F5E1C7] font-bold px-6 py-3.5 rounded-xl hover:bg-[#6B2B2E] transition shadow-md disabled:opacity-60 cursor-pointer"
                 >
                   <Send className="w-4 h-4" /> {reviewSubmitting ? 'Sending...' : 'Submit for approval'}
                 </button>
@@ -701,15 +804,18 @@ export default function HomePage() {
         </Reveal>
       </section>
 
-      <footer className="px-6 py-12 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center text-sm text-[#8C6D53] border-t border-[#D8CEBE]">
+      <footer className="px-6 py-12 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center text-sm text-[#8E3A47] border-t border-[#E7B6A5]/40">
         <p>© 2026 Oravya Real Estate. All rights reserved. Dubai, UAE.</p>
         <div className="flex gap-6 mt-4 md:mt-0">
-          <Link href="/properties" className="hover:text-[#4A151B] transition">Properties</Link>
-          <Link href="/services" className="hover:text-[#4A151B] transition">Services</Link>
-          <Link href="/holiday-homes" className="hover:text-[#4A151B] transition">Holiday Homes</Link>
-          <Link href="/contact" className="hover:text-[#4A151B] transition">Contact</Link>
+          <Link href="/properties" className="hover:text-[#4A1F23] transition">Properties</Link>
+          <Link href="/services" className="hover:text-[#4A1F23] transition">Services</Link>
+          <Link href="/holiday-homes" className="hover:text-[#4A1F23] transition">Holiday Homes</Link>
+          <Link href="/contact" className="hover:text-[#4A1F23] transition">Contact</Link>
         </div>
       </footer>
+
+      {/* Bouton Flottant de Téléchargement de Brochure */}
+      <FloatingBrochureBtn />
     </div>
   );
 }
