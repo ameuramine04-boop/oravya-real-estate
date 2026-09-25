@@ -1,142 +1,137 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Fraunces } from 'next/font/google';
-import {
-  Building2,
-  RefreshCcw,
-  Crown,
-  KeyRound,
-  LineChart,
-  ArrowRight,
-  Sparkles,
-  type LucideIcon,
-} from 'lucide-react';
-import Reveal from '@/components/Reveal';
+import Image from 'next/image';
+import { Building2, ChevronRight, ArrowRight, Layers } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import { ServiceItem } from '@/lib/data';
 
-const fraunces = Fraunces({
-  subsets: ['latin'],
-  weight: ['500', '600'],
-  style: ['normal', 'italic'],
-  display: 'swap',
-});
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  Building2,
-  RefreshCcw,
-  Crown,
-  KeyRound,
-  LineChart,
-  Sparkles,
-};
-
-function ServiceIcon({ name }: { name: string }) {
-  const Icon = ICON_MAP[name] || Building2;
-  return <Icon className="w-8 h-8 text-[#4A151B]" />;
-}
-
-export default function ServicesPage() {
-  const [services, setServices] = useState<ServiceItem[]>([]);
+export default function ServicesHubPage() {
+  const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
+    async function fetchServices() {
       try {
         const res = await fetch('/api/services');
         const data = await res.json();
         if (Array.isArray(data)) {
-          setServices(data.filter((s: ServiceItem) => s.active !== false));
+          // Filtrer uniquement les services propres à Oravya (Golden Visa, Master Agency, Development Management, Interiors, Snagging)
+          const oravyaServices = data.filter(srv => 
+            ['golden-visa', 'master-agency', 'development-management', 'interiors', 'snagging'].includes(srv.slug)
+          );
+          setServices(oravyaServices);
+        } else {
+          setServices([]);
         }
       } catch (err) {
-        console.error('Erreur chargement services:', err);
+        console.error('Erreur chargement des services:', err);
       } finally {
         setLoading(false);
       }
     }
-    load();
+    fetchServices();
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] font-sans selection:bg-[#4A151B] selection:text-[#F2EDE4] overflow-x-hidden">
+    <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] font-sans selection:bg-[#4A151B] selection:text-[#F2EDE4]">
       <Navbar />
 
-      <section className="relative px-6 pt-28 pb-16 max-w-7xl mx-auto overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-8 -translate-x-1/2 w-[520px] h-[520px] rounded-full bg-[#C5A880]/12 blur-[110px]" />
-        </div>
+      {/* HERO SECTION */}
+      <section className="relative bg-[#4A1F23] text-[#F5E1C7] py-28 px-6 border-b border-[#E7B6A5]/20 pt-36 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1600&auto=format&fit=crop')] bg-cover bg-center opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#4A1F23]/95 via-[#4A1F23]/85 to-[#4A1F23]/75" />
 
-        <Reveal>
-          <span className="inline-block text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-6 border-l-2 border-[#C5A880] pl-3">
-            Our Services
-          </span>
-          <h1 className={`${fraunces.className} text-4xl md:text-6xl font-medium tracking-tight mb-6 max-w-3xl leading-[1.08] text-[#2C181A]`}>
-            Every stage of a Dubai property journey
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="flex items-center gap-2 text-xs text-[#E7B6A5] mb-6">
+            <Link href="/" className="hover:underline">Home</Link>
+            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            <span className="text-white">Oravya Private Services</span>
+          </div>
+
+          <span className="text-xs uppercase tracking-widest text-[#E7B6A5] font-semibold mb-3 block">Private Wealth &amp; Real Estate Ecosystem</span>
+          <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-serif">
+            Exclusive Oravya Services in Dubai
           </h1>
-          <p className="text-[#685248] text-lg font-light max-w-2xl leading-relaxed">
-            From off-plan launches to luxury acquisitions and ongoing consultancy — Oravya guides international buyers with clarity and care.
+          <p className="text-[#F5E1C7]/90 font-light max-w-3xl text-sm md:text-base leading-relaxed">
+            Specialized divisions dedicated to institutional partnerships, development management, turnkey architecture, engineering inspections, and residency advisory.
           </p>
-        </Reveal>
+        </div>
       </section>
 
-      <section className="px-6 pb-24 max-w-7xl mx-auto">
+      {/* STATS / COUNTER BAR */}
+      <section className="max-w-7xl mx-auto px-6 -mt-10 relative z-30">
+        <div className="bg-white border border-[#E7B6A5]/60 rounded-3xl p-6 shadow-xl flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#F5E1C7]/40 flex items-center justify-center text-[#8E3A47]">
+              <Layers className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-2xl font-bold font-serif text-[#4A1F23]">Core Oravya Divisions</span>
+              <p className="text-xs text-[#8C6D53]">Tailored advisory, development, and inspection workflows.</p>
+            </div>
+          </div>
+          <span className="hidden sm:inline-block text-xs font-bold uppercase tracking-wider text-[#8E3A47] bg-[#F2EDE4] px-4 py-2 rounded-xl">
+            Live Database Synced
+          </span>
+        </div>
+      </section>
+
+      {/* SERVICES GRID */}
+      <main className="max-w-7xl mx-auto px-6 py-20">
         {loading ? (
-          <p className="text-sm text-[#8C6D53] py-16 text-center">Loading services from database...</p>
+          <div className="text-center py-24 text-sm text-[#8C6D53]">Loading Oravya services catalog...</div>
         ) : services.length === 0 ? (
-          <p className="text-sm text-[#8C6D53] py-16 text-center">No services available yet.</p>
+          <div className="text-center py-24 border border-dashed border-[#E7B6A5] rounded-3xl bg-white/40">
+            <Building2 className="w-12 h-12 text-[#8C6D53] mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-[#4A1F23] mb-1">No services found in database</h3>
+            <p className="text-xs text-[#8C6D53] mb-6">Configure your service offerings in the Admin Dashboard.</p>
+            <Link href="/admin" className="bg-[#8E3A47] text-[#F5E1C7] text-xs font-bold px-6 py-3 rounded-xl shadow-md">
+              Go to Admin Dashboard
+            </Link>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {services.map((service, i) => (
-              <Reveal key={service.id} delay={i * 80}>
-                <article className="h-full bg-[#EBE4DA]/85 border border-[#D8CEBE] p-8 rounded-2xl hover:border-[#4A151B]/40 transition duration-300 shadow-sm flex flex-col group">
-                  <div className="w-14 h-14 rounded-2xl bg-[#F2EDE4] border border-[#D8CEBE] flex items-center justify-center mb-6 group-hover:border-[#4A151B]/30 transition">
-                    <ServiceIcon name={service.icon} />
-                  </div>
-                  <h2 className={`${fraunces.className} text-2xl font-medium text-[#2C181A] mb-2`}>{service.title}</h2>
-                  <p className="text-sm font-semibold text-[#4A151B] mb-4">{service.tagline}</p>
-                  <p className="text-[#685248] text-sm font-light leading-relaxed mb-8 flex-1">
-                    {service.description || service.tagline}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {services.map((srv) => (
+              <div 
+                key={srv.id}
+                className="bg-white border border-[#E7B6A5]/50 rounded-3xl p-8 shadow-sm hover:border-[#8E3A47] transition duration-300 flex flex-col justify-between group"
+              >
+                <div>
+                  <span className="inline-block bg-[#F5E1C7]/40 text-[#8E3A47] text-[10px] font-bold px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
+                    {srv.category || 'Oravya Division'}
+                  </span>
+                  <h3 className="text-xl font-bold font-serif text-[#4A1F23] mb-3 group-hover:text-[#8E3A47] transition">
+                    {srv.title}
+                  </h3>
+                  <p className="text-xs md:text-sm text-[#685248] font-light leading-relaxed mb-6">
+                    {srv.description}
                   </p>
+                </div>
+
+                <div>
                   <Link
-                    href={`/contact?service=${encodeURIComponent(service.title)}`}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-[#4A151B] hover:underline"
+                    href={`/services/${srv.slug}`}
+                    className="w-full bg-[#F2EDE4]/60 hover:bg-[#8E3A47] hover:text-[#F5E1C7] border border-[#E7B6A5] text-[#4A1F23] py-3 rounded-xl transition text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm"
                   >
-                    Book a meeting <ArrowRight className="w-4 h-4" />
+                    <span>View Details</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
-                </article>
-              </Reveal>
+                </div>
+              </div>
             ))}
           </div>
         )}
+      </main>
 
-        <Reveal>
-          <div className="mt-16 bg-[#EBE4DA] border border-[#D8CEBE] rounded-3xl p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
-            <div>
-              <h3 className={`${fraunces.className} text-2xl md:text-3xl text-[#2C181A] mb-2`}>
-                Not sure which path fits you?
-              </h3>
-              <p className="text-[#685248] font-light max-w-xl">
-                Speak with an Oravya advisor — we map your goals to the right service and the right Dubai opportunity.
-              </p>
-            </div>
-            <Link
-              href="/contact"
-              className="bg-[#4A151B] text-[#F2EDE4] font-bold px-7 py-3.5 rounded-xl hover:bg-[#3B1115] transition shadow-md shrink-0"
-            >
-              Contact us
-            </Link>
-          </div>
-        </Reveal>
-      </section>
-
-      <footer className="px-6 py-12 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center text-sm text-[#8C6D53] border-t border-[#D8CEBE]">
+      {/* FOOTER */}
+      <footer className="px-6 py-12 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center text-sm text-[#8C6D53] border-t border-[#E7B6A5]/30">
         <p>© 2026 Oravya Real Estate. All rights reserved. Dubai, UAE.</p>
         <div className="flex gap-6 mt-4 md:mt-0">
-          <Link href="/properties" className="hover:text-[#4A151B] transition">Properties</Link>
-          <Link href="/services" className="hover:text-[#4A151B] transition">Services</Link>
-          <Link href="/contact" className="hover:text-[#4A151B] transition">Contact</Link>
+          <Link href="/properties" className="hover:text-[#4A1F23] transition">Properties</Link>
+          <Link href="/new-projects" className="hover:text-[#4A1F23] transition">New Projects</Link>
+          <Link href="/agents" className="hover:text-[#4A1F23] transition">Advisors</Link>
+          <Link href="/contact" className="hover:text-[#4A1F23] transition">Contact</Link>
         </div>
       </footer>
     </div>

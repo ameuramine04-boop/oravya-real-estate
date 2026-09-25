@@ -92,7 +92,7 @@ export default function Navbar() {
         {/* ================= NAVIGATION LINKS & HORIZONTAL MEGA MENUS ================= */}
         <nav className={`hidden xl:flex items-center gap-7 text-xs uppercase tracking-wider font-semibold ${isHome ? 'text-white' : 'text-[#2C181A]'}`}>
           
-          <Link href="/properties?status=Off-Plan" className="hover:text-[#C5A880] transition py-1 relative group whitespace-nowrap">
+          <Link href="/new-projects" className="hover:text-[#C5A880] transition py-1 relative group whitespace-nowrap">
             New Projects
             <span className={`absolute -bottom-1 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full ${isHome ? 'bg-white' : 'bg-[#4A151B]'}`} />
           </Link>

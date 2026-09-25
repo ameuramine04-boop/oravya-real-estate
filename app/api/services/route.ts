@@ -1,118 +1,96 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 
-const DEFAULT_SERVICES = [
-  {
-    title: 'Off Plan Properties',
-    tagline: 'Premium projects — Smart investments',
-    description:
-      'Access exclusive off-plan developments with strong capital growth potential, flexible payment plans, and early-bird pricing before public launch.',
-    icon: 'Building2',
-    sortOrder: 1,
-  },
-  {
-    title: 'Resale Properties',
-    tagline: 'Great locations — Great value',
-    description:
-      'Curated ready and secondary-market homes in Dubai’s most demanded communities, priced for lifestyle and long-term appreciation.',
-    icon: 'RefreshCcw',
-    sortOrder: 2,
-  },
-  {
-    title: 'Luxury Properties',
-    tagline: 'Exclusive living — Extraordinary lifestyles',
-    description:
-      'Ultra-premium residences, penthouses and waterfront villas selected for privacy, design excellence and lasting prestige.',
-    icon: 'Crown',
-    sortOrder: 3,
-  },
-  {
-    title: 'Rental Properties',
-    tagline: 'Quality homes — Long-term comfort',
-    description:
-      'Quality rental homes and managed stays tailored for comfort, convenience and reliable long-term living in Dubai.',
-    icon: 'KeyRound',
-    sortOrder: 4,
-  },
-  {
-    title: 'Investment Consultancy',
-    tagline: 'Data-driven advice — Better returns',
-    description:
-      'Market analysis, yield projections and portfolio strategy so every acquisition is backed by clear numbers and local expertise.',
-    icon: 'LineChart',
-    sortOrder: 5,
-  },
-];
-
-async function ensureDefaultServices() {
-  const count = await prisma.service.count();
-  if (count === 0) {
-    await prisma.service.createMany({ data: DEFAULT_SERVICES });
-  }
-}
-
-// GET : Récupérer tous les services depuis MySQL (Public pour les actifs, Admin pour tous)
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    await ensureDefaultServices();
-    const { searchParams } = new URL(request.url);
-    const all = searchParams.get('all') === '1';
-
-    if (all) {
-      const authHeader = request.headers.get('x-user-role');
-      if (!authHeader || authHeader !== 'ADMIN') {
-        return NextResponse.json(
-          { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
-          { status: 403 }
-        );
-      }
-    }
-
-    const services = await prisma.service.findMany({
-      where: all ? undefined : { active: true },
-      orderBy: { sortOrder: 'asc' },
-    });
-
-    return NextResponse.json(services, { status: 200 });
-  } catch (error) {
-    console.error('Erreur GET services:', error);
-    return NextResponse.json({ error: 'Erreur lors de la récupération des services' }, { status: 500 });
-  }
-}
-
-// POST : Ajouter un nouveau service depuis l'administration (Réservé aux administrateurs)
-export async function POST(request: Request) {
-  try {
-    // Vérification de sécurité : Seul un administrateur peut créer un service
-    const authHeader = request.headers.get('x-user-role');
-    if (!authHeader || authHeader !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
-        { status: 403 }
-      );
-    }
-
-    const body = await request.json();
-    const { title, tagline, description, icon, sortOrder, active } = body;
-
-    if (!title || !tagline) {
-      return NextResponse.json({ error: 'Title and tagline are required' }, { status: 400 });
-    }
-
-    const newService = await prisma.service.create({
-      data: {
-        title: title.trim(),
-        tagline: tagline.trim(),
-        description: description ? description.trim() : '',
-        icon: icon || 'Building2',
-        sortOrder: parseInt(sortOrder) || 0,
-        active: active !== undefined ? Boolean(active) : true,
+    const servicesList = [
+      {
+        id: 1,
+        slug: 'golden-visa',
+        category: 'Residency',
+        title: 'UAE Golden Visa',
+        description: 'A ten-year residency through property you already own, or are about to. The AED 2M threshold, how off-plan and mortgaged homes count, and the three steps to applying.'
       },
-    });
+      {
+        id: 2,
+        slug: 'master-agency',
+        category: 'Development & Agency',
+        title: 'Real Estate Master Agency',
+        description: 'Acting as a master agency to streamline and manage property transactions, coordinating sub-agencies and driving sales velocity.'
+      },
+      {
+        id: 3,
+        slug: 'development-management',
+        category: 'Investment',
+        title: 'Real Estate Development Management',
+        description: 'Real estate profit captured at the development level — the margin normally reserved for developers, made accessible to investors.'
+      },
+      {
+        id: 4,
+        slug: 'interiors',
+        category: 'Design & Fit-Out',
+        title: 'Interior Design & Fit-Out Services',
+        description: 'Design, build and deliver under one roof: from the feasibility model to the light fittings, blending Nordic minimalism with luxury.'
+      },
+      {
+        id: 5,
+        slug: 'snagging',
+        category: 'Inspection',
+        title: 'Property Snagging & Inspection Services',
+        description: 'An independent, engineer-led inspection before you take the keys — so the defects are the developer’s problem, not yours.'
+      },
+      {
+        id: 6,
+        slug: 'sales',
+        category: 'Transactions',
+        title: 'Property Sales Services',
+        description: 'Expertly managing off-plan and secondary sales for developers and private owners — delivered with precision and maximum returns.'
+      },
+      {
+        id: 7,
+        slug: 'rental',
+        category: 'Management',
+        title: 'Property Rental Services',
+        description: 'Managing rental properties to optimize rental yields, tenant relations, and occupancy rates across prime Dubai locations.'
+      },
+      {
+        id: 8,
+        slug: 'conveyancing',
+        category: 'Legal & Admin',
+        title: 'Conveyancing Services',
+        description: 'Streamlining property sales, property valuation, gifting, registration, and DLD regulatory compliance.'
+      },
+      {
+        id: 9,
+        slug: 'mortgage',
+        category: 'Finance',
+        title: 'Mortgage Advisory and Brokerage',
+        description: 'Offering expert advice and tailored brokerage services for local and international property financing.'
+      },
+      {
+        id: 10,
+        slug: 'holiday-homes',
+        category: 'Short-Term',
+        title: 'Holiday Homes Management',
+        description: 'Managing short-term luxury rental properties to provide exceptional guest experiences and higher yields.'
+      },
+      {
+        id: 11,
+        slug: 'mep',
+        category: 'Engineering',
+        title: 'MEP Services',
+        description: 'Mechanical, electrical, and plumbing solutions ensuring seamless integration, energy efficiency, and safety.'
+      },
+      {
+        id: 12,
+        slug: 'proptech',
+        category: 'Technology',
+        title: 'PropTech & Market Data (DXB Interact)',
+        description: 'Leveraging cutting-edge technology and data analytics to improve real estate transactions and market transparency.'
+      }
+    ];
 
-    return NextResponse.json(newService, { status: 201 });
+    return NextResponse.json(servicesList);
   } catch (error) {
-    console.error('Erreur POST service:', error);
-    return NextResponse.json({ error: 'Erreur lors de la création du service' }, { status: 500 });
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
   }
 }

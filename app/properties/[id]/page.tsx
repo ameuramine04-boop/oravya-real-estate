@@ -19,7 +19,7 @@ export default function PropertyDetailPage() {
   const [activeImage, setActiveImage] = useState<string>('');
   const [loading, setLoading] = useState(true);
   
-  // États de réservation / prise de contact
+  // Booking & Contact States
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [clientName, setClientName] = useState('');
@@ -33,9 +33,9 @@ export default function PropertyDetailPage() {
         const res = await fetch('/api/properties');
         const data = await res.json();
         if (Array.isArray(data)) {
-          const found = data.find((p: any) => p.id === id);
+          const found = data.find((p: any) => String(p.id) === String(id));
           if (found) {
-            // Parsing des images JSON stockées en base
+            // Parse images
             let imgs = ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00'];
             try {
               if (found.images) {
@@ -44,7 +44,7 @@ export default function PropertyDetailPage() {
               }
             } catch (e) {}
 
-            // Parsing des équipements (amenities)
+            // Parse amenities
             let ams = [];
             try {
               if (found.amenities) {
@@ -58,7 +58,7 @@ export default function PropertyDetailPage() {
           }
         }
       } catch (err) {
-        console.error('Erreur chargement détail bien:', err);
+        console.error('Error loading property detail:', err);
       } finally {
         setLoading(false);
       }
@@ -72,17 +72,17 @@ export default function PropertyDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] flex flex-col items-center justify-center p-6">
-        <p className="text-sm text-[#8C6D53]">Chargement du bien depuis MySQL...</p>
+        <p className="text-sm text-[#8C6D53]">Loading property details from database...</p>
       </div>
     );
   }
 
   if (!item) {
     return (
-      <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] flex flex-col items-center justify-center p-6">
-        <p className="text-lg font-medium mb-4">Propriété introuvable ou supprimée de la base de données.</p>
-        <Link href="/properties" className="bg-[#4A151B] text-[#F2EDE4] px-6 py-3 rounded-xl text-sm font-bold">
-          Retour au catalogue
+      <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] flex flex-col items-center justify-center p-6 text-center">
+        <p className="text-lg font-medium mb-4">Property not found or removed from the database.</p>
+        <Link href="/properties" className="bg-[#4A151B] text-[#F2EDE4] px-6 py-3 rounded-xl text-sm font-bold shadow-md">
+          Back to Portfolio
         </Link>
       </div>
     );
@@ -90,7 +90,7 @@ export default function PropertyDetailPage() {
 
   const isHoliday = item.type === 'Holiday Home';
 
-  // Calcul du nombre de nuits et du prix total pour les Holiday Homes
+  // Calculate total nights and price for Holiday Homes
   const calculateTotalDays = () => {
     if (!checkIn || !checkOut) return 1;
     const start = new Date(checkIn);
@@ -108,7 +108,6 @@ export default function PropertyDetailPage() {
     if (!clientName || !clientEmail || !clientPhone) return;
     if (isHoliday && (!checkIn || !checkOut)) return;
 
-    // Envoi de la réservation vers le localStorage ou route API dédiée si existante
     const newBooking = {
       id: 'book-' + Date.now(),
       itemId: item.id,
@@ -135,12 +134,12 @@ export default function PropertyDetailPage() {
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-6 py-12">
-        {/* BOUTON RETOUR */}
+        {/* BACK BUTTON */}
         <button onClick={() => router.back()} className="inline-flex items-center gap-2 text-xs font-semibold text-[#8C6D53] hover:text-[#4A151B] mb-8 transition">
-          <ArrowLeft className="w-4 h-4" /> Retour aux annonces
+          <ArrowLeft className="w-4 h-4" /> Back to listings
         </button>
 
-        {/* EN-TÊTE DU BIEN */}
+        {/* PROPERTY HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
           <div>
             <span className="text-xs uppercase tracking-widest text-[#C5A880] font-semibold mb-2 block">{item.type} • {item.status}</span>
@@ -152,12 +151,12 @@ export default function PropertyDetailPage() {
           <div className="text-left md:text-right">
             <p className="text-xs uppercase text-[#8C6D53]">{isHoliday ? 'Rate per night' : 'Asking Price'}</p>
             <p className={`${fraunces.className} text-3xl md:text-4xl text-[#4A151B] font-bold`}>
-              AED {item.price.toLocaleString()} {isHoliday && <span className="text-xs font-sans font-normal text-[#685248]">/ night</span>}
+              AED {item.price?.toLocaleString()} {isHoliday && <span className="text-xs font-sans font-normal text-[#685248]">/ night</span>}
             </p>
           </div>
         </div>
 
-        {/* GALERIE DE PHOTOS */}
+        {/* PHOTO GALLERY */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
           <div className="lg:col-span-2 h-[420px] md:h-[500px] rounded-3xl overflow-hidden relative border border-[#D8CEBE] shadow-md bg-[#DFD6C9]">
             <Image src={activeImage} alt={item.name} fill className="object-cover" priority />
@@ -177,36 +176,36 @@ export default function PropertyDetailPage() {
           </div>
         </div>
 
-        {/* CONTENU PRINCIPAL & FORMULAIRE */}
+        {/* MAIN CONTENT & BOOKING FORM */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
           
-          {/* DESCRIPTION & CARACTÉRISTIQUES */}
+          {/* DESCRIPTION & SPECS */}
           <div className="lg:col-span-2 space-y-8">
             <div className="bg-[#EBE4DA] border border-[#D8CEBE] p-8 rounded-3xl shadow-sm">
-              <h3 className={`${fraunces.className} text-2xl text-[#2C181A] mb-4`}>Caractéristiques principales</h3>
+              <h3 className={`${fraunces.className} text-2xl text-[#2C181A] mb-4`}>Key Features</h3>
               <div className="grid grid-cols-3 gap-4 py-6 border-y border-[#D8CEBE] text-center">
                 <div>
-                  <p className="text-xs text-[#8C6D53] uppercase font-semibold">Chambres</p>
-                  <p className={`${fraunces.className} text-2xl text-[#4A151B] mt-1`}>{item.beds}</p>
+                  <p className="text-xs text-[#8C6D53] uppercase font-semibold">Bedrooms</p>
+                  <p className={`${fraunces.className} text-2xl text-[#4A151B] mt-1`}>{item.beds || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#8C6D53] uppercase font-semibold">Salles de bain</p>
-                  <p className={`${fraunces.className} text-2xl text-[#4A151B] mt-1`}>{item.baths}</p>
+                  <p className="text-xs text-[#8C6D53] uppercase font-semibold">Bathrooms</p>
+                  <p className={`${fraunces.className} text-2xl text-[#4A151B] mt-1`}>{item.baths || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[#8C6D53] uppercase font-semibold">Surface</p>
-                  <p className={`${fraunces.className} text-2xl text-[#4A151B] mt-1`}>{item.size} sqft</p>
+                  <p className="text-xs text-[#8C6D53] uppercase font-semibold">Size</p>
+                  <p className={`${fraunces.className} text-2xl text-[#4A151B] mt-1`}>{item.size ? `${item.size.toLocaleString()} sqft` : 'N/A'}</p>
                 </div>
               </div>
 
-              <h4 className={`${fraunces.className} text-xl text-[#2C181A] mt-8 mb-3`}>À propos de ce bien</h4>
+              <h4 className={`${fraunces.className} text-xl text-[#2C181A] mt-8 mb-3`}>About this property</h4>
               <p className="text-[#685248] font-light leading-relaxed">
-                {item.description || 'Propriété haut de gamme sélectionnée par les experts d’Oravya pour son emplacement stratégique et sa rentabilité exceptionnelle à Dubaï.'}
+                {item.description || 'Exclusive luxury property handpicked by Oravya experts for its prime location, superior architectural design, and exceptional investment value in Dubai.'}
               </p>
 
               {item.amenities && item.amenities.length > 0 && (
                 <>
-                  <h4 className={`${fraunces.className} text-xl text-[#2C181A] mt-8 mb-4`}>Équipements & Services</h4>
+                  <h4 className={`${fraunces.className} text-xl text-[#2C181A] mt-8 mb-4`}>Amenities & Features</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {item.amenities.map((amenity: string, idx: number) => (
                       <div key={idx} className="flex items-center gap-2 bg-[#F2EDE4] border border-[#D8CEBE] px-4 py-2.5 rounded-xl text-xs font-medium text-[#2C181A]">
@@ -219,37 +218,37 @@ export default function PropertyDetailPage() {
             </div>
           </div>
 
-          {/* MODULE DE RÉSERVATION OU VISITE INTERACTIF */}
+          {/* INTERACTIVE BOOKING / PRIVATE TOUR WIDGET */}
           <div className="bg-[#EBE4DA] border border-[#D8CEBE] p-8 rounded-3xl shadow-xl sticky top-28">
             {bookedSuccess ? (
               <div className="py-8 text-center animate-in fade-in">
                 <CheckCircle2 className="w-14 h-14 text-[#4A151B] mx-auto mb-4" />
                 <h3 className={`${fraunces.className} text-2xl text-[#2C181A] mb-2`}>
-                  {isHoliday ? 'Réservation confirmée !' : 'Demande de visite enregistrée !'}
+                  {isHoliday ? 'Booking Confirmed!' : 'Tour Request Received!'}
                 </h3>
                 <p className="text-xs text-[#685248] font-light mb-6 leading-relaxed">
-                  Merci {clientName}. Un conseiller expert d'Oravya vous contactera par email et téléphone pour finaliser les détails.
+                  Thank you {clientName}. An expert advisor from Oravya will contact you via email and phone shortly to finalize arrangements.
                 </p>
                 <button
                   onClick={() => setBookedSuccess(false)}
-                  className="bg-[#4A151B] text-[#F2EDE4] text-xs font-bold px-6 py-3 rounded-xl hover:bg-[#3B1115] transition"
+                  className="bg-[#4A151B] text-[#F2EDE4] text-xs font-bold px-6 py-3 rounded-xl hover:bg-[#3B1115] transition shadow-md"
                 >
-                  Effectuer une autre demande
+                  Make another request
                 </button>
               </div>
             ) : (
               <form onSubmit={handleBookingSubmit} className="space-y-4">
                 <h3 className={`${fraunces.className} text-2xl text-[#2C181A] mb-1`}>
-                  {isHoliday ? 'Réserver ce séjour' : 'Planifier une visite'}
+                  {isHoliday ? 'Book this Stay' : 'Schedule a Private Tour'}
                 </h3>
                 <p className="text-xs text-[#685248] mb-6">
-                  {isHoliday ? 'Sélectionnez vos dates sur l\'agenda interactif.' : 'Remplissez vos coordonnées pour être contacté en priorité.'}
+                  {isHoliday ? 'Select your dates on the interactive calendar below.' : 'Provide your contact details for priority VIP assistance.'}
                 </p>
 
                 {isHoliday && (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] uppercase tracking-wider text-[#8C6D53] font-semibold mb-1">Arrivée (Check-in)</label>
+                      <label className="block text-[11px] uppercase tracking-wider text-[#8C6D53] font-semibold mb-1">Check-in</label>
                       <input
                         type="date"
                         value={checkIn}
@@ -259,7 +258,7 @@ export default function PropertyDetailPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] uppercase tracking-wider text-[#8C6D53] font-semibold mb-1">Départ (Check-out)</label>
+                      <label className="block text-[11px] uppercase tracking-wider text-[#8C6D53] font-semibold mb-1">Check-out</label>
                       <input
                         type="date"
                         value={checkOut}
@@ -272,7 +271,7 @@ export default function PropertyDetailPage() {
                 )}
 
                 <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-[#8C6D53] font-semibold mb-1">Nom complet</label>
+                  <label className="block text-[11px] uppercase tracking-wider text-[#8C6D53] font-semibold mb-1">Full Name</label>
                   <input
                     type="text"
                     placeholder="Ex: Alexander Vance"
@@ -284,7 +283,7 @@ export default function PropertyDetailPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-[#8C6D53] font-semibold mb-1">Email professionnel</label>
+                  <label className="block text-[11px] uppercase tracking-wider text-[#8C6D53] font-semibold mb-1">Business Email</label>
                   <input
                     type="email"
                     placeholder="alexander@investor.co.uk"
@@ -296,7 +295,7 @@ export default function PropertyDetailPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-[#8C6D53] font-semibold mb-1">Téléphone / WhatsApp</label>
+                  <label className="block text-[11px] uppercase tracking-wider text-[#8C6D53] font-semibold mb-1">Phone / WhatsApp</label>
                   <input
                     type="tel"
                     placeholder="+44 20 7946 0921"
@@ -310,11 +309,11 @@ export default function PropertyDetailPage() {
                 {isHoliday && checkIn && checkOut && (
                   <div className="bg-[#F2EDE4] border border-[#D8CEBE] p-4 rounded-xl text-xs space-y-1">
                     <div className="flex justify-between text-[#685248]">
-                      <span>Durée du séjour :</span>
-                      <span className="font-semibold text-[#2C181A]">{totalNights} nuits</span>
+                      <span>Stay Duration:</span>
+                      <span className="font-semibold text-[#2C181A]">{totalNights} nights</span>
                     </div>
                     <div className="flex justify-between text-[#685248] pt-2 border-t border-[#D8CEBE]">
-                      <span className="font-bold text-[#2C181A]">Total estimé :</span>
+                      <span className="font-bold text-[#2C181A]">Estimated Total:</span>
                       <span className="font-bold text-[#4A151B]">AED {totalPrice.toLocaleString()}</span>
                     </div>
                   </div>
@@ -325,14 +324,14 @@ export default function PropertyDetailPage() {
                   className="w-full bg-[#4A151B] text-[#F2EDE4] font-bold py-3.5 rounded-xl text-xs hover:bg-[#3B1115] transition shadow-lg flex items-center justify-center gap-2 mt-4"
                 >
                   <Calendar className="w-4 h-4 text-[#C5A880]" />
-                  <span>{isHoliday ? 'Confirmer la réservation' : 'Demander une visite privée'}</span>
+                  <span>{isHoliday ? 'Confirm Booking' : 'Request Private Tour'}</span>
                 </button>
               </form>
             )}
 
             <div className="mt-6 pt-6 border-t border-[#D8CEBE] flex items-center gap-3 text-xs text-[#685248]">
               <ShieldCheck className="w-5 h-5 text-[#4A151B] shrink-0" />
-              <span>Transactions sécurisées et accompagnement juridique certifié par Oravya Dubai.</span>
+              <span>Secure transactions and certified legal support by Oravya Dubai.</span>
             </div>
           </div>
 

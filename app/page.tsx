@@ -62,13 +62,13 @@ const HERO_SLIDES = [
   {
     image: 'https://images.pexels.com/photos/442579/pexels-photo-442579.jpeg?auto=compress&cs=tinysrgb&w=1920',
     title: 'Redefining Luxury in Dubai',
-    subtitle: 'Discover exceptional residences in the heart of Downtown and Palm Jumeirah.',
+    subtitle: 'Discover exceptional residences in the heart of Dubai.',
     tag: 'Exclusive Collection'
   },
   {
     image: 'https://images.pexels.com/photos/3787839/pexels-photo-3787839.jpeg?auto=compress&cs=tinysrgb&w=1920',
     title: 'Waterfront Villas & Penthouses',
-    subtitle: 'A sumptuous lifestyle featuring breathtaking panoramic views of the lagoon.',
+    subtitle: 'A sumptuous lifestyle featuring breathtaking panoramic views of Dubai.',
     tag: 'Waterfront Living'
   },
   {
