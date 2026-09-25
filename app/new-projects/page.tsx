@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
@@ -18,7 +18,7 @@ function formatAED(value: number) {
   return `AED ${value.toLocaleString('en-US')}`;
 }
 
-export default function NewProjectsPage() {
+function NewProjectsContent() {
   const searchParams = useSearchParams();
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,31 +89,7 @@ export default function NewProjectsPage() {
   }, [projects, selectedCommunity, selectedType, selectedHandover]);
 
   return (
-    <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] font-sans selection:bg-[#4A151B] selection:text-[#F2EDE4] overflow-x-hidden">
-      <Navbar />
-
-      {/* ================= HERO & BREADCRUMBS AVEC ARRIÈRE-PLAN LUXUEUX ================= */}
-      <section className="relative bg-[#4A1F23] text-[#F5E1C7] py-28 px-6 border-b border-[#E7B6A5]/20 pt-36 overflow-hidden">
-        {/* Image d'arrière-plan avec effet parallax et voile assombrissant */}
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1600&auto=format&fit=crop')] bg-cover bg-center" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#4A1F23]/95 via-[#4A1F23]/85 to-[#4A1F23]/75 backdrop-blur-[2px]" />
-
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="flex items-center gap-2 text-xs text-[#E7B6A5] mb-6">
-            <Link href="/" className="hover:underline">Home</Link>
-            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
-            <span className="text-white">New Off Plan Projects in Dubai</span>
-          </div>
-
-          <h1 className={`${fraunces.className} text-3xl md:text-5xl font-bold tracking-tight mb-4 drop-shadow-md`}>
-            Off-Plan Properties &amp; New Projects in Dubai
-          </h1>
-          <p className="text-[#F5E1C7]/90 font-light max-w-3xl text-sm md:text-base leading-relaxed drop-shadow">
-            Launches from top developers, with payment plans and handover dates on every listing. Filter dynamically by community, unit type, or handover schedule.
-          </p>
-        </div>
-      </section>
-
+    <>
       {/* ================= DYNAMIC FILTER BAR ================= */}
       <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-30">
         <div className="bg-white border border-[#E7B6A5]/50 rounded-2xl p-4 md:p-6 shadow-xl grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
@@ -270,6 +246,40 @@ export default function NewProjectsPage() {
           </div>
         )}
       </section>
+    </>
+  );
+}
+
+export default function NewProjectsPage() {
+  return (
+    <div className="min-h-screen bg-[#F2EDE4] text-[#2C181A] font-sans selection:bg-[#4A151B] selection:text-[#F2EDE4] overflow-x-hidden">
+      <Navbar />
+
+      {/* ================= HERO & BREADCRUMBS AVEC ARRIÈRE-PLAN LUXUEUX ================= */}
+      <section className="relative bg-[#4A1F23] text-[#F5E1C7] py-28 px-6 border-b border-[#E7B6A5]/20 pt-36 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=1600&auto=format&fit=crop')] bg-cover bg-center" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#4A1F23]/95 via-[#4A1F23]/85 to-[#4A1F23]/75 backdrop-blur-[2px]" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="flex items-center gap-2 text-xs text-[#E7B6A5] mb-6">
+            <Link href="/" className="hover:underline">Home</Link>
+            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+            <span className="text-white">New Off Plan Projects in Dubai</span>
+          </div>
+
+          <h1 className={`${fraunces.className} text-3xl md:text-5xl font-bold tracking-tight mb-4 drop-shadow-md`}>
+            Off-Plan Properties &amp; New Projects in Dubai
+          </h1>
+          <p className="text-[#F5E1C7]/90 font-light max-w-3xl text-sm md:text-base leading-relaxed drop-shadow">
+            Launches from top developers, with payment plans and handover dates on every listing. Filter dynamically by community, unit type, or handover schedule.
+          </p>
+        </div>
+      </section>
+
+      {/* ENVELOPPEMENT SUSPENSE POUR ÉVITER L'ERREUR BUILD */}
+      <Suspense fallback={<div className="text-center py-24 text-sm text-[#8C6D53]">Loading projects interface...</div>}>
+        <NewProjectsContent />
+      </Suspense>
 
       {/* ================= SEO CONTENT ================= */}
       <div className="bg-white border-t border-[#E7B6A5]/30 py-20 px-6">
