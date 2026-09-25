@@ -1,21 +1,23 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
-    const servicesList = [
+    const oravyaServices = [
       {
         id: 1,
         slug: 'golden-visa',
         category: 'Residency',
         title: 'UAE Golden Visa',
-        description: 'A ten-year residency through property you already own, or are about to. The AED 2M threshold, how off-plan and mortgaged homes count, and the three steps to applying.'
+        description: 'A ten-year residency through property you own. The AED 2M threshold, off-plan rules, and streamlined 30-day processing handled end-to-end.'
       },
       {
         id: 2,
         slug: 'master-agency',
         category: 'Development & Agency',
         title: 'Real Estate Master Agency',
-        description: 'Acting as a master agency to streamline and manage property transactions, coordinating sub-agencies and driving sales velocity.'
+        description: 'Acting as a master agency to streamline sales, orchestrate sub-agency networks, and drive high-velocity property transactions.'
       },
       {
         id: 3,
@@ -29,67 +31,53 @@ export async function GET() {
         slug: 'interiors',
         category: 'Design & Fit-Out',
         title: 'Interior Design & Fit-Out Services',
-        description: 'Design, build and deliver under one roof: from the feasibility model to the light fittings, blending Nordic minimalism with luxury.'
+        description: 'Design, build and deliver under one roof: from feasibility models to custom light fittings, blending Nordic minimalism with bespoke luxury.'
       },
       {
         id: 5,
         slug: 'snagging',
         category: 'Inspection',
         title: 'Property Snagging & Inspection Services',
-        description: 'An independent, engineer-led inspection before you take the keys — so the defects are the developer’s problem, not yours.'
+        description: 'An independent, engineer-led inspection before you take the keys — so construction defects are the developer’s problem, not yours.'
       },
       {
         id: 6,
         slug: 'sales',
         category: 'Transactions',
         title: 'Property Sales Services',
-        description: 'Expertly managing off-plan and secondary sales for developers and private owners — delivered with precision and maximum returns.'
+        description: 'Expertly managing off-plan and secondary market sales with precision, ensuring maximum returns for buyers and investors.'
       },
       {
         id: 7,
         slug: 'rental',
         category: 'Management',
         title: 'Property Rental Services',
-        description: 'Managing rental properties to optimize rental yields, tenant relations, and occupancy rates across prime Dubai locations.'
+        description: 'Comprehensive rental management designed to optimize rental yields, tenant relations, and asset occupancy rates.'
       },
       {
         id: 8,
         slug: 'conveyancing',
         category: 'Legal & Admin',
         title: 'Conveyancing Services',
-        description: 'Streamlining property sales, property valuation, gifting, registration, and DLD regulatory compliance.'
+        description: 'Streamlining property registrations, valuations, gifting, and full regulatory compliance with the Dubai Land Department.'
       },
       {
         id: 9,
         slug: 'mortgage',
         category: 'Finance',
         title: 'Mortgage Advisory and Brokerage',
-        description: 'Offering expert advice and tailored brokerage services for local and international property financing.'
+        description: 'Tailored financial advisory and brokerage services to secure optimal mortgage structures for local and international clients.'
       },
       {
         id: 10,
         slug: 'holiday-homes',
         category: 'Short-Term',
         title: 'Holiday Homes Management',
-        description: 'Managing short-term luxury rental properties to provide exceptional guest experiences and higher yields.'
-      },
-      {
-        id: 11,
-        slug: 'mep',
-        category: 'Engineering',
-        title: 'MEP Services',
-        description: 'Mechanical, electrical, and plumbing solutions ensuring seamless integration, energy efficiency, and safety.'
-      },
-      {
-        id: 12,
-        slug: 'proptech',
-        category: 'Technology',
-        title: 'PropTech & Market Data (DXB Interact)',
-        description: 'Leveraging cutting-edge technology and data analytics to improve real estate transactions and market transparency.'
+        description: 'Managing short-term luxury rentals to provide exceptional guest experiences and maximize short-term investment yields.'
       }
     ];
 
-    return NextResponse.json(servicesList);
+    return NextResponse.json(oravyaServices);
   } catch (error) {
     return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
   }
