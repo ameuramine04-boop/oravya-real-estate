@@ -1,56 +1,82 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 
-// GET : Récupérer toutes les réunions (Réservé aux administrateurs)
-export async function GET(request: Request) {
+const prisma = new PrismaClient();
+
+// 1. LIRE (GET)
+export async function GET() {
   try {
-    // Vérification de sécurité : Seul un administrateur peut voir toutes les réunions
-    const authHeader = request.headers.get('x-user-role');
-    if (!authHeader || authHeader !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Accès non autorisé. Réservé aux administrateurs.' }, 
-        { status: 403 }
-      );
-    }
-
     const meetings = await prisma.meeting.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' }
     });
-    
-    return NextResponse.json(meetings, { status: 200 });
+    return NextResponse.json(meetings);
   } catch (error) {
-    console.error('Erreur GET meetings:', error);
-    return NextResponse.json({ error: 'Erreur lors de la récupération des réunions' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch meetings' }, { status: 500 });
   }
 }
 
-// POST : Enregistrer une nouvelle demande de réunion (Ouvert au public)
-export async function POST(request: Request) {
+// 2. CRÉER (POST)
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { name, email, phone, service, date, time, message } = body;
-
-    // Validation des champs obligatoires
-    if (!name || !email || !phone || !service || !date || !time) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
+    const body = await req.json();
+    const { name, email, phone, service, date, time, message, status } = body;
 
     const newMeeting = await prisma.meeting.create({
       data: {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        service: service.trim(),
-        date: date.trim(),
-        time: time.trim(),
-        message: message ? message.trim() : '',
-        status: 'Pending',
-      },
+        name,
+        email,
+        phone,
+        service,
+        date,
+        time,
+        message: message || null,
+        status: status || 'Pending',
+      }
     });
 
     return NextResponse.json(newMeeting, { status: 201 });
   } catch (error) {
-    console.error('Erreur POST meeting:', error);
-    return NextResponse.json({ error: 'Erreur lors de la création de la réunion' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create meeting' }, { status: 500 });
+  }
+}
+
+// 3. MODIFIER (PUT)
+export async function PUT(req: Request) {
+  try {
+    const body = await req.json();
+    const { id, name, email, phone, service, date, time, message, status } = body;
+
+    const updatedMeeting = await prisma.meeting.update({
+      where: { id },
+      data: {
+        name,
+        email,
+        phone,
+        service,
+        date,
+        time,
+        message: message || null,
+        status,
+      }
+    });
+
+    return NextResponse.json(updatedMeeting, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to update meeting' }, { status: 500 });
+  }
+}
+
+// 4. SUPPRIMER (DELETE)
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    
+    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+
+    await prisma.meeting.delete({ where: { id } });
+    return NextResponse.json({ message: 'Meeting deleted successfully' }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to delete meeting' }, { status: 500 });
   }
 }

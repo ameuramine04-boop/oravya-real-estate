@@ -8,10 +8,10 @@ const prisma = new PrismaClient();
 // 1. LIRE (GET)
 export async function GET() {
   try {
-    const areas = await prisma.area.findMany({ orderBy: { createdAt: 'desc' } });
-    return NextResponse.json(areas);
+    const agents = await prisma.agent.findMany({ orderBy: { createdAt: 'desc' } });
+    return NextResponse.json(agents);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch areas' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch agents' }, { status: 500 });
   }
 }
 
@@ -20,27 +20,31 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
+    const email = formData.get('email') as string;
+    const phone = formData.get('phone') as string;
+    const languages = formData.get('languages') as string;
+    const specialty = formData.get('specialty') as string;
+    const active = formData.get('active') === 'true';
     
-    const file = formData.get('image') as File | null;
-    let imageUrl = '';
+    const file = formData.get('photo') as File | null;
+    let photoUrl = '';
 
     if (file && typeof file === 'object' && file.name) {
-      const uploadDir = path.join(process.cwd(), 'public/uploads/areas');
+      const uploadDir = path.join(process.cwd(), 'public/uploads/agents');
       await mkdir(uploadDir, { recursive: true });
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
       const uniqueName = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
       await writeFile(path.join(uploadDir, uniqueName), buffer);
-      imageUrl = `/uploads/areas/${uniqueName}`;
+      photoUrl = `/uploads/agents/${uniqueName}`;
     }
 
-    const newArea = await prisma.area.create({
-      data: { name, description, image: imageUrl || null }
+    const newAgent = await prisma.agent.create({
+      data: { name, email, phone, languages, specialty, active, photo: photoUrl || null }
     });
-    return NextResponse.json(newArea, { status: 201 });
+    return NextResponse.json(newAgent, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create area' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create agent' }, { status: 500 });
   }
 }
 
@@ -50,28 +54,32 @@ export async function PUT(req: Request) {
     const formData = await req.formData();
     const id = formData.get('id') as string;
     const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
+    const email = formData.get('email') as string;
+    const phone = formData.get('phone') as string;
+    const languages = formData.get('languages') as string;
+    const specialty = formData.get('specialty') as string;
+    const active = formData.get('active') === 'true';
     
-    const file = formData.get('image') as File | null;
-    let imageUrl = formData.get('existingImage') as string; // Garde l'ancienne image si non modifiée
+    const file = formData.get('photo') as File | null;
+    let photoUrl = formData.get('existingPhoto') as string; 
 
     if (file && typeof file === 'object' && file.name) {
-      const uploadDir = path.join(process.cwd(), 'public/uploads/areas');
+      const uploadDir = path.join(process.cwd(), 'public/uploads/agents');
       await mkdir(uploadDir, { recursive: true });
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
       const uniqueName = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
       await writeFile(path.join(uploadDir, uniqueName), buffer);
-      imageUrl = `/uploads/areas/${uniqueName}`; // Nouvelle image
+      photoUrl = `/uploads/agents/${uniqueName}`; 
     }
 
-    const updatedArea = await prisma.area.update({
+    const updatedAgent = await prisma.agent.update({
       where: { id },
-      data: { name, description, image: imageUrl || null }
+      data: { name, email, phone, languages, specialty, active, photo: photoUrl || null }
     });
-    return NextResponse.json(updatedArea, { status: 200 });
+    return NextResponse.json(updatedAgent, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update area' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update agent' }, { status: 500 });
   }
 }
 
@@ -83,9 +91,9 @@ export async function DELETE(req: Request) {
     
     if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 
-    await prisma.area.delete({ where: { id } });
-    return NextResponse.json({ message: 'Area deleted successfully' }, { status: 200 });
+    await prisma.agent.delete({ where: { id } });
+    return NextResponse.json({ message: 'Agent deleted successfully' }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete area' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete agent' }, { status: 500 });
   }
 }
