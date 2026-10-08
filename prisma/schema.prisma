@@ -7,17 +7,25 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// ==========================================
+// 1. UTILISATEURS & AUTHENTIFICATION
+// ==========================================
 model User {
   id        String   @id @default(uuid())
   name      String?
   email     String   @unique
   password  String?
   phone     String?
-  role      String   @default("USER")
+  role      String   @default("USER") // ADMIN, AGENT, USER
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+// ==========================================
+// 2. PORTFOLIO IMMOBILIER (Real Estate)
+// ==========================================
+
+// Propriétés de Luxe (Marché Secondaire / Ready)
 model Property {
   id          String   @id @default(uuid())
   name        String
@@ -36,24 +44,47 @@ model Property {
   updatedAt   DateTime @updatedAt
 }
 
-model Meeting {
-  id        String   @id @default(uuid())
-  name      String
-  email     String
-  phone     String
-  service   String
-  date      String
-  time      String
-  message   String?
-  status    String   @default("Pending")
-  createdAt DateTime @default(now())
+// Nouveaux Projets (Off-Plan & Lancement Promoteurs)
+model NewProject {
+  id          String   @id @default(cuid())
+  name        String
+  developer   String
+  type        String
+  location    String
+  price       Float
+  status      String
+  handover    String
+  paymentPlan String
+  surface     String
+  bedrooms    String
+  description String   @db.Text
+  amenities   String   @db.Text
+  images      String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-model Service {
+// Maisons de Vacances (Locations Courte Durée)
+model HolidayHome {
+  id          String   @id @default(cuid())
+  name        String
+  location    String
+  pricePerNight Float
+  beds        Int
+  maxGuests   Int
+  description String   @db.Text
+  amenities   String   @db.Text
+  images      String   @db.Text
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Catégories (Optionnel, pour classer les biens)
+model PropertyCategory {
   id          String   @id @default(uuid())
-  title       String
-  tagline     String
-  description String?  @db.Text
+  name        String   @unique
+  description String   @db.Text
   icon        String   @default("Building2")
   sortOrder   Int      @default(0)
   active      Boolean  @default(true)
@@ -61,6 +92,179 @@ model Service {
   updatedAt   DateTime @updatedAt
 }
 
+// Quartiers & Communautés (Areas)
+model Area {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String   @db.Text
+  image       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Promoteurs Immobiliers (Developers)
+model Developer {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  logo        String?
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ==========================================
+// 3. VENTES, FINANCE & RÉSERVATIONS
+// ==========================================
+
+// Demandes de mise en vente (Sell Requests)
+model SellRequest {
+  id          String   @id @default(cuid())
+  ownerName   String
+  email       String
+  phone       String
+  propertyType String
+  location    String
+  expectedPrice Float?
+  message     String?  @db.Text
+  status      String   @default("Pending") // Pending, Contacted, Listed, Rejected
+  createdAt   DateTime @default(now())
+}
+
+// Réservations (Locations Holiday Homes ou RDV Spécifiques)
+model Reservation {
+  id          String   @id @default(cuid())
+  clientName  String
+  clientEmail String?
+  clientPhone String?
+  assetName   String   // Nom du bien réservé
+  startDate   DateTime
+  endDate     DateTime
+  status      String   @default("Confirmed") // Confirmed, Pending, Cancelled, Completed
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+}
+
+// Comptabilité & Paiements (ERP)
+model Payment {
+  id          String   @id @default(cuid())
+  clientName  String
+  reference   String   // Ex: Tranche 1 - Ritz Carlton
+  type        String   // Property Sale, Holiday Rental, Service Fee
+  totalAmount Float
+  paidAmount  Float
+  dueDate     DateTime?
+  status      String   @default("Pending") // Fully Paid, Partial, Pending, Defaulted
+  createdAt   DateTime @default(now())
+}
+
+// ==========================================
+// 4. CRM, RÉSEAU & AGENDA
+// ==========================================
+
+// Agenda Global (Événements internes de l'admin)
+model AgendaEvent {
+  id          String   @id @default(cuid())
+  title       String
+  date        DateTime
+  type        String   // Meeting, Call, Viewing, Deadline
+  participants String?
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+}
+
+// Prises de Rendez-vous (Consultations Clients)
+model Meeting {
+  id          String   @id @default(uuid())
+  name        String
+  email       String
+  phone       String
+  service     String
+  date        String
+  time        String
+  message     String?  @db.Text
+  status      String   @default("Pending") // Pending, Scheduled, Completed, Cancelled
+  createdAt   DateTime @default(now())
+}
+
+// Réseau d'Agents (Brokers)
+model Agent {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String
+  photo       String?
+  languages   String?  // Ex: English, Arabic, French
+  specialty   String?  // Ex: Off-Plan, Luxury Villas
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// Partenaires (Avocats, Banques, etc.)
+model Partner {
+  id          String   @id @default(cuid())
+  companyName String
+  contactName String?
+  type        String   // Legal, Financial, Developer, Interior
+  logo        String?
+  email       String?
+  createdAt   DateTime @default(now())
+}
+
+// ==========================================
+// 5. BRANDING, CONTENU & CMS
+// ==========================================
+
+// Gestion du contenu textuel du site (CMS Global)
+model SiteSettings {
+  id           String   @id @default(cuid())
+  heroTitle    String
+  heroSubtitle String
+  aboutTitle   String
+  aboutText    String   @db.Text
+  updatedAt    DateTime @updatedAt
+}
+
+// Les 10 Services Oravya (Modèle fusionné et corrigé)
+model Service {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  category    String
+  title       String
+  tagline     String?
+  description String   @db.Text
+  vision      String?  @db.Text
+  icon        String   @default("Briefcase")
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Articles de Blog / Journal
+model BlogArticle {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  category    String
+  author      String
+  image       String   @db.Text
+  excerpt     String   @db.Text
+  content     String   @db.Text // Le texte formaté en HTML/Markdown
+  publishedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Tendances du Marché (Market Trends)
+model MarketTrend {
+  id          String   @id @default(cuid())
+  title       String
+  quarter     String   // Ex: Q1 2026
+  reportUrl   String?  // Lien vers un PDF par exemple
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+}
+
+// Avis Clients
 model Review {
   id          String   @id @default(uuid())
   authorName  String
@@ -68,28 +272,18 @@ model Review {
   investment  String?
   quote       String   @db.Text
   rating      Int      @default(5)
-  status      String   @default("Pending")
+  status      String   @default("Pending") // Pending, Approved, Rejected
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
+// Boutons d'Appel à l'Action (Page d'accueil)
 model HomeCta {
   id          String   @id @default(uuid())
   label       String
   href        String
   description String?
   icon        String   @default("ArrowRight")
-  sortOrder   Int      @default(0)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model PropertyCategory {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String   @db.Text
-  icon        String   @default("Building2")
   sortOrder   Int      @default(0)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())

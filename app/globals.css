@@ -9,3 +9,7 @@
 .animate-carousel {
   animation: carousel 25s infinite ease-in-out;
 }
+
+.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(231, 182, 165, 0.2); border-radius: 10px; }
